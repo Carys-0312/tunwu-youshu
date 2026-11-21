@@ -1,0 +1,67 @@
+{
+  "id": "tunwu-notify",
+  "displayName": "囤物有数系统通知",
+  "version": "1.0.0",
+  "description": "系统级本地通知调度：Android AlarmManager + 通知渠道，iOS UNUserNotificationCenter",
+  "keywords": ["notification", "alarm", "reminder"],
+  "engines": {
+    "HBuilderX": "^4.25.0"
+  },
+  "dcloudext": {
+    "type": "uts",
+    "sale": {
+      "regular": { "price": "0.00" },
+      "sourcecode": { "price": "0.00" }
+    },
+    "contact": { "qq": "" },
+    "declaration": {
+      "ads": "无",
+      "data": "无",
+      "permissions": "通知、精确闹钟、开机广播"
+    }
+  },
+  "uni_modules": {
+    "dependencies": [],
+    "encrypt": [],
+    "platforms": {
+      "cloud": {
+        "tcb": "n",
+        "aliyun": "n",
+        "alipay": "n",
+        "qiniu": "n"
+      },
+      "client": {
+        "Vue": { "vue2": "n", "vue3": "y" },
+        "App": { "app-vue": "y", "app-nvue": "y" },
+        "H5-mobile": {
+          "Safari": "n",
+          "Android Browser": "n",
+          "微信浏览器(Android)": "n",
+          "QQ浏览器(Android)": "n"
+        },
+        "H5-pc": {
+          "Chrome": "n",
+          "IE": "n",
+          "Edge": "n",
+          "Firefox": "n",
+          "Safari": "n"
+        },
+        "小程序": {
+          "微信": "n",
+          "支付宝": "n",
+          "百度": "n",
+          "字节跳动": "n",
+          "QQ": "n",
+          "钉钉": "n",
+          "快手": "n",
+          "飞书": "n",
+          "京东": "n"
+        },
+        "快应用": {
+          "华为": "n",
+          "联盟": "n"
+        }
+      }
+    }
+  }
+}

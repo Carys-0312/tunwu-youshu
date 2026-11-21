@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="240" viewBox="0 0 390 240" fill="none">
+  <!-- 取景框底部的「拍摄台」：一件待拍的包装 + 两件小物，安静地放在桌面边缘，
+       和登录页那张会蹦的货架图区分开；这张不动，镜头前只留一件主角。
+       东西分列两边，中间留给「从相册选择」按钮 -->
+  <g stroke="#a87e46" stroke-width="1.15" stroke-linejoin="round">
+    <!-- 桌面：一条暖木色台面，上沿提亮，像摄影棚里的置物台 -->
+    <rect x="-6" y="200" width="402" height="46" rx="5" fill="#e6c98f"/>
+    <rect x="-6" y="193" width="402" height="9" rx="4" fill="#f3dfb6"/>
+
+    <!-- 投影先落地，东西才像真的搁在台面上 -->
+    <ellipse cx="132" cy="198" rx="36" ry="5" fill="#dcbf92" stroke="none"/>
+    <ellipse cx="294" cy="198" rx="26" ry="4" fill="#dcbf92" stroke="none"/>
+    <ellipse cx="76" cy="199" rx="18" ry="4" fill="#dcbf92" stroke="none"/>
+
+    <!-- 主角：牛奶盒，微歪一点，盒身上有一小块印刷标签 -->
+    <g transform="rotate(-2 132 160)">
+      <path d="M104 124h56v72h-56z" fill="#f4dcae"/>
+      <path d="M104 124l13-17h30l13 17z" fill="#7fa8b8"/>
+      <rect x="112" y="105" width="42" height="7" rx="3" fill="#6b95a5"/>
+      <rect x="112" y="146" width="42" height="26" rx="3" fill="#7fa8b8"/>
+      <path d="M118 155h30M118 162h20" stroke="#fbf3e0" stroke-width="1.6"/>
+      <path d="M112 179h22" stroke-width="1"/>
+    </g>
+
+    <!-- 右侧：玻璃罐，奶油标签上画一道红线 -->
+    <g>
+      <rect x="272" y="162" width="44" height="36" rx="6" fill="#d9705c"/>
+      <rect x="276" y="152" width="36" height="11" rx="4" fill="#8a5a2a"/>
+      <rect x="278" y="172" width="32" height="15" rx="2" fill="#fbf3e0"/>
+      <path d="M283 179h22" stroke="#7c3229" stroke-width="1.4"/>
+    </g>
+
+    <!-- 左侧：一颗青苹果，给画面一点绿 -->
+    <g>
+      <circle cx="76" cy="184" r="15" fill="#9bb488"/>
+      <path d="M76 169v-6" stroke="#8a5a2a" stroke-width="1.2"/>
+      <path d="M78 164c5-6 11-5 13-2-4 5-10 6-13 2z" fill="#6f8f6a"/>
+    </g>
+  </g>
+
+  <!-- 取景辅助：盒顶上一小段虚线弧，暗示「它被镜头对上了」 -->
+  <path d="M84 96c12-20 31-30 49-30s37 10 49 30" fill="none" stroke="#7fa8b8"
+        stroke-width="1.1" stroke-linecap="round" stroke-dasharray="3 7" opacity="0.55"/>
+</svg>

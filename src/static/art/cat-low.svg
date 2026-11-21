@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <style>
+
+    .basket { transform-box: view-box; transform-origin: 48px 18px; animation: swing 2.4s ease-in-out infinite; }
+    @keyframes swing { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+
+  </style>
+  <g stroke="#a87e46" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+
+    <g class="basket">
+      <path d="M20 40h56l-7 38a5 5 0 0 1-5 4H32a5 5 0 0 1-5-4z" fill="#e6c078"/>
+      <path d="M20 40h56"/>
+      <path d="M33 40v-7a15 15 0 0 1 30 0v7" fill="none"/>
+      <path d="M38 52v18M48 52v18M58 52v18" stroke-width="2.4"/>
+    </g>
+  </g>
+</svg>

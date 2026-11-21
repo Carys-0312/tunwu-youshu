@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <style>
+
+    .flake-a { transform-box: view-box; transform-origin: 17px 45px; animation: spin 4.5s linear infinite; }
+    .flake-b { transform-box: view-box; transform-origin: 79px 58px; animation: spin 5.5s linear infinite reverse; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+  </style>
+  <g stroke="#a87e46" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+
+    <rect x="34" y="14" width="28" height="42" rx="13" fill="#7fa8b8"/>
+    <path d="M48 20v30" stroke="#fbf3e0" stroke-width="2.4"/>
+    <rect x="44" y="54" width="8" height="22" rx="4" fill="#e0b25c"/>
+    <g class="flake-a"><path d="M17 38v14M10 41l14 8M24 41l-14 8" stroke-width="2.4"/></g>
+    <g class="flake-b"><path d="M79 52v12M72 55l14 6M86 55l-14 6" stroke-width="2.4"/></g>
+  </g>
+</svg>

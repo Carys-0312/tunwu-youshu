@@ -1,0 +1,88 @@
+{
+    "name" : "囤物有数",
+    "appid" : "__UNI__51C0929",
+    "description" : "本地优先的宿舍物品与临期管理 App",
+    "versionName" : "0.1.27",
+    "versionCode" : "127",
+    "transformPx" : false,
+    /* 5+App特有相关 */
+    "app-plus" : {
+        "usingComponents" : true,
+        "nvueStyleCompiler" : "uni-app",
+        "compilerVersion" : 3,
+        "splashscreen" : {
+            "alwaysShowBeforeRender" : true,
+            "waiting" : true,
+            "autoclose" : true,
+            "delay" : 0
+        },
+        /* 模块配置：v1 只用本地能力，暂不引入推送 / 地图等模块 */
+        "modules" : {
+            "Barcode" : {},
+            "Bluetooth" : {},
+            "Camera" : {},
+            "Contacts" : {},
+            "FacialRecognitionVerify" : {},
+            "Fingerprint" : {},
+            "Geolocation" : {},
+            "LivePusher" : {},
+            "Messaging" : {},
+            "Push" : {},
+            "Share" : {},
+            "SQLite" : {},
+            "VideoPlayer" : {}
+        },
+        /* 应用发布信息 */
+        "distribute" : {
+            /* 桌面图标：和登录页的「囤」字章同一个符号，最大尺寸 512 在 static/icons/icon-512.png */
+            "icons" : {
+                "android" : {
+                    "hdpi" : "src/static/icons/icon-72.png",
+                    "xhdpi" : "src/static/icons/icon-96.png",
+                    "xxhdpi" : "src/static/icons/icon-144.png",
+                    "xxxhdpi" : "src/static/icons/icon-192.png"
+                }
+            },
+            /* android打包配置 */
+            "android" : {
+                /* 上线初期走公网 HTTP，Android 9+ 默认禁止明文请求，这里放开；上 HTTPS 后可关掉 */
+                "usesCleartextTraffic" : true,
+                /* 系统级提醒用到 Android 8.0 的通知渠道，最低版本与 NFR-18 保持一致 */
+                "minSdkVersion" : 26,
+                "permissions" : [
+                    "<uses-permission android:name=\"android.permission.INTERNET\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.CAMERA\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"/>",
+                    "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>",
+                    "<uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\"/>",
+                    "<uses-permission android:name=\"android.permission.SCHEDULE_EXACT_ALARM\"/>",
+                    "<uses-permission android:name=\"android.permission.RECEIVE_BOOT_COMPLETED\"/>",
+                    "<uses-permission android:name=\"android.permission.VIBRATE\"/>"
+                ]
+            },
+            /* ios打包配置 */
+            "ios" : {
+                "dSYMs" : false
+            },
+            /* SDK配置 */
+            "sdkConfigs" : {
+                "geolocation" : {
+                    "system" : {
+                        "__platform__" : [ "ios", "android" ]
+                    }
+                },
+                "push" : {},
+                "share" : {}
+            }
+        }
+    },
+    /* 快应用特有相关 */
+    "quickapp" : {},
+    "uniStatistics" : {
+        "enable" : false
+    },
+    "vueVersion" : "3",
+    "locale" : "zh-Hans",
+    "fallbackLocale" : "zh-Hans"
+}

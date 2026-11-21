@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <!-- 快门里的相机：奶油色线稿，压在铜色圆钮上 -->
+  <path d="M3 7.8h18v11.4a2.2 2.2 0 0 1-2.2 2.2H5.2A2.2 2.2 0 0 1 3 19.2V7.8Z"
+        stroke="#fffdf8" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M8.2 7.6 9.6 5h4.8l1.4 2.6" stroke="#fffdf8" stroke-width="1.8"
+        stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="12" cy="13.4" r="3.4" stroke="#fffdf8" stroke-width="1.8"/>
+  <circle cx="17.6" cy="10.6" r="0.9" fill="#fffdf8"/>
+</svg>

@@ -1,0 +1,25 @@
+export type NotifyPermission = 'granted' | 'denied' | 'default' | 'unsupported'
+
+/** L2：App 划掉/进程被杀后仍由系统送达；L1：只有进程存活时有效 */
+export type NotifyLevel = 'L1' | 'L2'
+
+export type ScheduleOptions = {
+  /** 稳定 id，同一天重复登记会覆盖而不是叠加 */
+  id: string
+  title: string
+  body: string
+  /** 触发时间，毫秒时间戳 */
+  at: number
+  /** 点击后希望打开的页面路径，例如 /pages/dashboard/index */
+  payload?: string
+}
+
+export type NotifyCapability = {
+  supported: boolean
+  permission: NotifyPermission
+  /** Android 12+ 是否已获得精确闹钟权限；iOS 恒为 true */
+  exactAlarm: boolean
+  /** 通知渠道是否可用（Android 8+） */
+  channelReady: boolean
+  level: NotifyLevel
+}

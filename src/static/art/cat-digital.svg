@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <style>
+
+    .bar { animation: charge 2.4s ease-in-out infinite; }
+    .b2 { animation-delay: 0.25s; }
+    .b3 { animation-delay: 0.5s; }
+    @keyframes charge { 0%, 15% { opacity: 0.3; } 30%, 65% { opacity: 1; } 85%, 100% { opacity: 0.3; } }
+
+  </style>
+  <g stroke="#a87e46" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+
+    <rect x="30" y="28" width="36" height="54" rx="8" fill="#e7c9a4"/>
+    <rect x="40" y="20" width="16" height="8" rx="3" fill="#d3ae72"/>
+    <rect class="bar" x="37" y="42" width="22" height="7" rx="3.5" fill="#8fa864"/>
+    <rect class="bar b2" x="37" y="54" width="22" height="7" rx="3.5" fill="#8fa864"/>
+    <rect class="bar b3" x="37" y="66" width="12" height="7" rx="3.5" fill="#8fa864"/>
+  </g>
+</svg>

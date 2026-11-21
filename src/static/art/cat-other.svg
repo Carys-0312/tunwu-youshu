@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <style>
+
+    .lid { transform-box: view-box; transform-origin: 48px 26px; animation: lid 2.6s ease-in-out infinite; }
+    @keyframes lid { 0%, 62%, 100% { transform: translateY(0); } 30% { transform: translateY(-9px); } }
+
+  </style>
+  <g stroke="#a87e46" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+
+    <g class="lid"><rect x="20" y="26" width="56" height="10" rx="2" fill="#e0b25c"/></g>
+    <rect x="20" y="34" width="56" height="48" rx="5" fill="#d3ae72"/>
+    <path d="M48 38v42" stroke-width="2.4"/>
+  </g>
+</svg>

@@ -1,0 +1,66 @@
+import {
+  NotifyCapability,
+  NotifyPermission,
+  ScheduleOptions
+} from '../interface.uts'
+
+export function schedule(options: ScheduleOptions): boolean {
+  return TunwuNotifyNative.schedule(
+    options.id,
+    options.title,
+    options.body,
+    options.at,
+    options.payload == null ? '' : options.payload
+  )
+}
+
+export function cancel(id: string): void {
+  TunwuNotifyNative.cancel(id)
+}
+
+export function cancelAll(): void {
+  TunwuNotifyNative.cancelAll()
+}
+
+export function getPermission(): NotifyPermission {
+  return TunwuNotifyNative.getPermission() as NotifyPermission
+}
+
+export function getCapability(): NotifyCapability {
+  const permission = getPermission()
+  return {
+    supported: true,
+    permission: permission,
+    exactAlarm: true,
+    channelReady: true,
+    level: permission == 'granted' ? 'L2' : 'L1'
+  } as NotifyCapability
+}
+
+export function requestPermission(): Promise<boolean> {
+  return new Promise<boolean>((resolve, reject) => {
+    TunwuNotifyNative.requestPermission((granted: boolean) => {
+      resolve(granted)
+    })
+  })
+}
+
+export function refreshPermission(): Promise<NotifyPermission> {
+  return new Promise<NotifyPermission>((resolve, reject) => {
+    TunwuNotifyNative.refreshPermission((value: string) => {
+      resolve(value as NotifyPermission)
+    })
+  })
+}
+
+export function openSettings(): void {
+  TunwuNotifyNative.openSettings()
+}
+
+export function openExactAlarmSettings(): void {
+  TunwuNotifyNative.openSettings()
+}
+
+export function consumeLaunchPayload(): string {
+  return TunwuNotifyNative.consumeLaunchPayload()
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application>
+        <!-- 到点展示通知；只由本应用的 PendingIntent 触发，不对外导出 -->
+        <receiver
+            android:name="uts.sdk.modules.tunwuNotify.TunwuNotifyReceiver"
+            android:exported="false" />
+
+        <!-- 开机或应用更新后重新登记未触发的计划 -->
+        <receiver
+            android:name="uts.sdk.modules.tunwuNotify.TunwuNotifyBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

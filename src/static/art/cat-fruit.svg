@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <style>
+
+    .leaf { transform-box: view-box; transform-origin: 53px 24px; animation: leaf 2s ease-in-out infinite; }
+    @keyframes leaf { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-18deg); } }
+
+  </style>
+  <g stroke="#a87e46" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+
+    <path d="M48 34c-8-6-20-1-22 11-2 12 5 24 14 29 4 2 11 2 16 0 9-5 16-17 14-29-2-12-14-17-22-11z" fill="#d9705c"/>
+    <path d="M48 34c0-6 1-10 4-14"/>
+    <g class="leaf"><path d="M53 24c5-5 11-4 14-1-2 5-7 7-14 4z" fill="#8fa864"/></g>
+  </g>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <style>
+
+    .cap { transform-box: view-box; transform-origin: 48px 48px; animation: cap 3s ease-in-out infinite; }
+    @keyframes cap { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(12deg); } }
+
+  </style>
+  <g stroke="#a87e46" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+
+    <g transform="rotate(-35 48 48)">
+      <g class="cap">
+        <rect x="22" y="36" width="52" height="24" rx="12" fill="#fbf3e0"/>
+        <path d="M48 36v24" stroke-width="2.4"/>
+        <path d="M48 36H34a12 12 0 0 0 0 24h14z" fill="#d9705c"/>
+      </g>
+    </g>
+  </g>
+</svg>
