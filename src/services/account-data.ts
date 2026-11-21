@@ -39,8 +39,22 @@ function describe(count: { items: number; rows: number }): string {
   return count.items > 0 ? `${count.items} 件物品` : `${count.rows} 条本机数据`;
 }
 
-/** 游客数据：问要不要带进新账号；选「从空开始」还要再确认一次删除 */
-async function askGuestData(username: string, label: string): Promise<LocalDataPlan> {
+/** 游客数据：服务器已有数据时明确告知会被替换；否则问要不要带进账号 */
+async function askGuestData(
+  username: string,
+  label: string,
+  serverItemCount = 0,
+): Promise<LocalDataPlan> {
+  if (serverItemCount > 0) {
+    const proceed = await ask({
+      title: '服务器上已有数据',
+      content: `账号「${username}」的服务器上已有 ${serverItemCount} 种物品。\n登录后会从服务器恢复，本机这 ${label} 会被替换。\n建议先取消登录，导出备份后再继续。`,
+      confirmText: '继续并恢复',
+      cancelText: '取消登录',
+    });
+    return proceed ? 'keep' : 'cancel';
+  }
+
   const bring = await ask({
     title: '本机已有物品',
     content: `这台设备上有 ${label}。\n要带进账号「${username}」吗？如果这台设备之前登录过其他账号，建议从空库存开始。`,
@@ -88,6 +102,7 @@ export async function planLocalDataForNewAccount(username: string): Promise<Loca
 export async function planLocalDataForExistingAccount(
   userId: string,
   username: string,
+  serverItemCount = 0,
 ): Promise<LocalDataPlan> {
   const owner = getLocalOwner();
   if (owner === userId) return 'keep';
@@ -98,16 +113,19 @@ export async function planLocalDataForExistingAccount(
   const label = describe(count);
 
   if (owner) {
+    const serverHint = serverItemCount > 0
+      ? `再从服务器恢复「${username}」的 ${serverItemCount} 种物品`
+      : `再加载「${username}」的库存`;
     const clear = await ask({
       title: '本机是其他账号的数据',
-      content: `这台设备上还留着另一个账号的 ${label}。\n继续登录会清除本机数据，再加载「${username}」的库存。原账号的服务器数据不受影响。`,
+      content: `这台设备上还留着另一个账号的 ${label}。\n继续登录会清除本机数据，${serverHint}。原账号的服务器数据不受影响。`,
       confirmText: '清除并继续',
       cancelText: '取消登录',
     });
     return clear ? 'clear' : 'cancel';
   }
 
-  return askGuestData(username, label);
+  return askGuestData(username, label, serverItemCount);
 }
 
 /** 认证成功后执行计划：该清就清，然后把本机数据记为这个账号的 */

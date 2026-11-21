@@ -23,6 +23,7 @@ import { isOnboardingPending, markOnboardingPending } from '@/services/onboardin
 import { markFeatureTourPending } from '@/services/feature-tour';
 import { removeDemoRows } from '@/db/repo';
 import { logInfo, logWarn } from '@/services/logger';
+import { fetchSyncStatus } from '@/services/sync';
 
 type Mode = 'login' | 'register';
 
@@ -165,7 +166,9 @@ async function submit(): Promise<void> {
       : await login(name, password.value);
 
     if (mode.value === 'login') {
-      plan = await planLocalDataForExistingAccount(session.user.id, name);
+      // 服务器已有数据时，登录后会整份拉回并替换本机数据，先让用户知道
+      const serverItemCount = await fetchServerItemCount();
+      plan = await planLocalDataForExistingAccount(session.user.id, name, serverItemCount);
       if (plan === 'cancel') {
         clearSession();
         error.value = '已取消登录';
@@ -413,12 +416,23 @@ async function submitRecovery(): Promise<void> {
   }
 }
 
+/** 登录前先看服务器有没有数据；离线或接口失败时按 0 处理，走原有流程 */
+async function fetchServerItemCount(): Promise<number> {
+  try {
+    const status = await fetchSyncStatus();
+    return Number(status.counts?.item ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
 /**
  * 找回密码后会直接拿到登录态，跟登录一样先处理本机数据归属。
  * 返回 false 表示用户取消了这次登录（会话已清掉）。
  */
 async function settleRecoverySession(session: AuthSession, name: string): Promise<boolean> {
-  const plan = await planLocalDataForExistingAccount(session.user.id, name);
+  const serverItemCount = await fetchServerItemCount();
+  const plan = await planLocalDataForExistingAccount(session.user.id, name, serverItemCount);
   if (plan === 'cancel') {
     clearSession();
     recoveryError.value = '已取消登录';

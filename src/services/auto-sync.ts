@@ -24,6 +24,17 @@ interface SyncState {
   revision: number;
   /** 上次同步成功时的本地内容指纹，用来判断本机有没有新改动 */
   checksum: string;
+  /** 上次成功同步的本机时间戳（毫秒） */
+  at?: number;
+}
+
+export type SyncOutcome = 'pulled' | 'pushed' | 'noop' | 'error';
+
+export interface SyncResult {
+  ok: boolean;
+  outcome: SyncOutcome;
+  message: string;
+  revision?: number;
 }
 
 const STATE_PREFIX = 'auto_sync_state:';
@@ -70,7 +81,12 @@ function loadState(userId: string): SyncState | null {
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
     const revision = Number(parsed?.revision);
     if (!Number.isFinite(revision) || typeof parsed?.checksum !== 'string') return null;
-    return { revision, checksum: parsed.checksum };
+    const at = Number(parsed?.at);
+    return {
+      revision,
+      checksum: parsed.checksum,
+      at: Number.isFinite(at) && at > 0 ? at : undefined,
+    };
   } catch {
     return null;
   }
@@ -78,10 +94,17 @@ function loadState(userId: string): SyncState | null {
 
 function saveState(userId: string, state: SyncState): void {
   try {
-    uni.setStorageSync(stateKey(userId), JSON.stringify(state));
+    uni.setStorageSync(stateKey(userId), JSON.stringify({ ...state, at: Date.now() }));
   } catch (err) {
     console.warn('[auto-sync] 保存同步状态失败', err);
   }
+}
+
+/** 当前账号上次成功同步的本机时间；没有记录返回 null */
+export function lastSyncAt(): number | null {
+  const session = getSession();
+  if (!session) return null;
+  return loadState(session.user.id)?.at ?? null;
 }
 
 /** 内容指纹：行顺序无关，任何一张表发生变化都会变 */
@@ -157,11 +180,18 @@ export async function rememberSync(revision: number): Promise<void> {
  * - 本机没改过、服务器也没有更新 → 直接返回（不发请求）
  * - 这台设备第一次同步这个账号：服务器有数据就先拉下来，没有就把本机推上去
  * - 本机改过 → 推送；没改过但服务器 revision 更新 → 拉取
+ * - force=true 供「立即同步」使用：跳过冷却，并尽量和服务器对一次账
  */
-export async function runAutoSync(options: { checkRemote?: boolean } = {}): Promise<void> {
+export async function runAutoSync(
+  options: { checkRemote?: boolean; force?: boolean } = {},
+): Promise<SyncResult> {
   const session = getSession();
-  if (!session) return;
-  if (suspended || running || Date.now() < retryAfter) return;
+  if (!session) return { ok: false, outcome: 'noop', message: '登录后才能同步' };
+  if (suspended) return { ok: false, outcome: 'noop', message: '正在处理账号数据' };
+  if (running) return { ok: false, outcome: 'noop', message: '同步正在进行' };
+  if (!options.force && Date.now() < retryAfter) {
+    return { ok: false, outcome: 'noop', message: '稍后自动重试' };
+  }
 
   running = true;
   try {
@@ -175,7 +205,7 @@ export async function runAutoSync(options: { checkRemote?: boolean } = {}): Prom
       setLocalOwner(userId);
     } else if (owner !== userId) {
       warnOwnerMismatch(userId);
-      return;
+      return { ok: false, outcome: 'error', message: '本机数据属于其他账号' };
     }
 
     // 登录状态下本机不该再有任何演示数据：清掉后再算指纹，算出来的就是干净快照
@@ -190,9 +220,12 @@ export async function runAutoSync(options: { checkRemote?: boolean } = {}): Prom
     const state = loadState(userId);
     const dirty = !state || state.checksum !== checksum;
 
-    const checkRemote = Boolean(options.checkRemote)
-      && Date.now() - lastRemoteCheck > REMOTE_COOLDOWN_MS;
-    if (!dirty && !checkRemote) return;
+    const force = Boolean(options.force);
+    const checkRemote = force
+      || (Boolean(options.checkRemote) && Date.now() - lastRemoteCheck > REMOTE_COOLDOWN_MS);
+    if (!dirty && !checkRemote) {
+      return { ok: true, outcome: 'noop', message: '已是最新' };
+    }
     if (checkRemote) lastRemoteCheck = Date.now();
 
     const status = await fetchSyncStatus();
@@ -202,21 +235,23 @@ export async function runAutoSync(options: { checkRemote?: boolean } = {}): Prom
       // 新设备第一次登录这个账号：先拿服务器的数据，别用本机的演示数据覆盖
       const revision = await pullAndApply();
       saveState(userId, { revision, checksum: await localChecksum() });
-      return;
+      return { ok: true, outcome: 'pulled', message: '已从服务器恢复', revision };
     }
 
     if (!dirty) {
       if (status.revision > (state as SyncState).revision && serverHasData) {
         const revision = await pullAndApply();
         saveState(userId, { revision, checksum: await localChecksum() });
+        return { ok: true, outcome: 'pulled', message: '已从服务器更新', revision };
       }
-      return;
+      return { ok: true, outcome: 'noop', message: '已是最新' };
     }
 
     // 本机有新改动：以本机为准推送
     const result = await pushSnapshot();
     saveState(userId, { revision: result.revision, checksum });
     logInfo('同步', '已推送本机数据', `修订 ${result.revision}`);
+    return { ok: true, outcome: 'pushed', message: '已上传本机数据', revision: result.revision };
   } catch (err) {
     // 离线、服务端拒绝覆盖等情况都不打扰用户，过一会儿再试
     retryAfter = Date.now() + RETRY_COOLDOWN_MS;
@@ -225,6 +260,11 @@ export async function runAutoSync(options: { checkRemote?: boolean } = {}): Prom
       lastFailureLogAt = Date.now();
       logWarn('同步', '同步没成功，稍后自动重试', logDetail(err));
     }
+    return {
+      ok: false,
+      outcome: 'error',
+      message: err instanceof Error ? err.message : '同步失败',
+    };
   } finally {
     running = false;
   }
