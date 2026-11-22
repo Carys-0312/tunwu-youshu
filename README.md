@@ -160,7 +160,7 @@ App（本仓库）
 
 ## 参与贡献
 
-欢迎提 Issue 和 PR。提交前请确保：
+欢迎提 Issue 和 PR。开发环境、分支约定和提交前检查见 [CONTRIBUTING.md](CONTRIBUTING.md)，提交前请确保：
 
 ```bash
 npm run type-check

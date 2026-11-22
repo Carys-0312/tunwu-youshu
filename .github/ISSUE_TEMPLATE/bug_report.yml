@@ -1,0 +1,84 @@
+name: Bug 报告
+description: 报告一个可以复现的问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。提交前请先搜索已有 Issue，避免重复。
+        请勿在 Issue 中粘贴 API Key、服务器地址、账号密码或真实个人数据。
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 运行平台
+      options:
+        - Android App
+        - iOS App
+        - H5（浏览器）
+        - 其他 / 不确定
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App 版本
+      description: 「我的 → 关于」里可以看到，例如 0.1.28
+      placeholder: 0.1.28
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: 系统与浏览器 / 机型
+      placeholder: 例如 Windows 11 + Chrome 131，或 Android 15 / 某机型
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 请按顺序写清楚每一步
+      placeholder: |
+        1. 打开「库存」页
+        2. 点击右上角搜索
+        3. ……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      description: 有报错信息或控制台日志请一并贴出（注意去掉敏感信息）
+    validations:
+      required: true
+
+  - type: textarea
+    id: extras
+    attributes:
+      label: 截图、录屏或补充说明
+      description: 可以直接拖拽图片到这里
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 确认
+      options:
+        - label: 我使用的是最新版本，并已搜索过已有 Issue
+          required: true
+        - label: 内容中不包含 API Key、服务器地址、账号密码或他人隐私
+          required: true
