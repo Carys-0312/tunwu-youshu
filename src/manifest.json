@@ -2,8 +2,8 @@
     "name" : "囤物有数",
     "appid" : "__UNI__51C0929",
     "description" : "本地优先的宿舍物品与临期管理 App",
-    "versionName" : "0.1.29",
-    "versionCode" : "129",
+    "versionName" : "0.1.30",
+    "versionCode" : "130",
     "transformPx" : false,
     /* 5+App特有相关 */
     "app-plus" : {

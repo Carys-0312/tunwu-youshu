@@ -22,6 +22,20 @@ export interface ReportSource {
   consumptions: Consumption[];
 }
 
+/**
+ * 月报按品类筛选：物品 → 批次 → 消耗流水一起收窄。
+ * 「全部」或空字符串原样返回，避免无谓复制。
+ */
+export function filterReportSource(source: ReportSource, category: string): ReportSource {
+  if (!category || category === '全部') return source;
+  const items = source.items.filter((item) => displayCategory(item) === category);
+  const itemIds = new Set(items.map((item) => item.id));
+  const batches = source.batches.filter((batch) => itemIds.has(batch.item_id));
+  const batchIds = new Set(batches.map((batch) => batch.id));
+  const consumptions = source.consumptions.filter((row) => batchIds.has(row.batch_id));
+  return { items, batches, consumptions };
+}
+
 export interface ReportItem {
   item: Item;
   /** 本月有消耗记录的天数 */
@@ -121,6 +135,8 @@ export interface DayOpen {
   image: string | null;
   /** 这天这件物品开了几批 */
   batchCount: number;
+  /** 开封后保质期（天），与月二选一 */
+  paoDays: number | null;
   /** 开封后保质期（月） */
   paoMonths: number | null;
   /** 包装上的到期日 */
@@ -493,7 +509,11 @@ function buildItemShares(stats: ReportItem[], consumedUnits: number): ItemShare[
 
 function batchExpiry(batch: Batch): string | null {
   if (batch.expiry_date) return batch.expiry_date;
-  if (batch.opened_at && batch.pao_months) {
+  if (!batch.opened_at) return null;
+  if (batch.pao_days && batch.pao_days > 0) {
+    return addDaysISO(batch.opened_at.slice(0, 10), batch.pao_days);
+  }
+  if (batch.pao_months && batch.pao_months > 0) {
     return addMonths(batch.opened_at.slice(0, 10), batch.pao_months);
   }
   return null;
@@ -919,6 +939,7 @@ export function buildMonthReport(source: ReportSource, month: string): MonthRepo
     const prev = rows.get(item.id);
     if (prev) {
       prev.batchCount += 1;
+      if (prev.paoDays === null) prev.paoDays = batch.pao_days;
       if (prev.paoMonths === null) prev.paoMonths = batch.pao_months;
       if (prev.expiryDate === null) prev.expiryDate = batch.expiry_date;
     } else {
@@ -929,6 +950,7 @@ export function buildMonthReport(source: ReportSource, month: string): MonthRepo
         category: displayCategory(item),
         image: item.image,
         batchCount: 1,
+        paoDays: batch.pao_days,
         paoMonths: batch.pao_months,
         expiryDate: batch.expiry_date,
       });

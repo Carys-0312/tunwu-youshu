@@ -1,7 +1,7 @@
 import type { TableName } from '@/types/models';
 
 /** 当前 schema 版本，写入 PRAGMA user_version（App）与 IDB 库版本（H5）。 */
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 export const DB_NAME = 'tunwu';
 
 export const TABLES: TableName[] = [
@@ -49,6 +49,7 @@ export const CREATE_TABLE_SQL: Record<TableName, string> = {
     expiry_date TEXT,
     opened_at TEXT,
     pao_months INTEGER,
+    pao_days INTEGER,
     quantity INTEGER NOT NULL DEFAULT 0
   )`,
   consumption: `CREATE TABLE IF NOT EXISTS consumption (

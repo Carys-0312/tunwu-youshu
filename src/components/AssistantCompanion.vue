@@ -10,6 +10,11 @@ import { useInventoryStore } from '@/stores/inventory';
 import { usePersonaStore } from '@/stores/persona';
 import { loadWeeklyStats, type WeeklyStats } from '@/db/repo';
 import { askAssistantStream, type ChatTurn } from '@/services/assistant';
+import {
+  clearChatHistory,
+  loadChatHistory,
+  saveChatHistory,
+} from '@/services/chat-history';
 
 interface Bubble {
   id: string;
@@ -18,6 +23,8 @@ interface Bubble {
   state?: 'pending' | 'error';
   /** 这条回答对应的提问，重试时用 */
   question?: string;
+  /** 写入本机的时间，恢复后保持原顺序 */
+  at?: number;
 }
 
 const props = withDefaults(
@@ -75,6 +82,7 @@ const dockStyle = computed(() => {
 });
 
 onMounted(async () => {
+  restoreHistory();
   try {
     await store.init();
     await persona.load();
@@ -212,6 +220,7 @@ async function askInto(question: string, replyId: string): Promise<void> {
       },
     );
     patch(replyId, { text: answer, state: undefined });
+    persistHistory();
   } catch (err) {
     const message = err instanceof Error ? err.message : `${persona.name}出错了，稍后再问`;
     patch(replyId, {
@@ -232,19 +241,69 @@ function patch(id: string, next: { text: string; state?: 'pending' | 'error' }):
   bubbles.value[index].state = next.state;
 }
 
+/** 只把已完成的对话写进本机；pending / error 不落盘 */
+function persistHistory(): void {
+  saveChatHistory(
+    bubbles.value
+      .filter((bubble) => bubble.state === undefined)
+      .map((bubble) => ({
+        id: bubble.id,
+        role: bubble.role,
+        text: bubble.text,
+        question: bubble.question,
+        at: bubble.at ?? Date.now(),
+      })),
+  );
+}
+
+function seqFromId(id: string): number {
+  const match = /^m(\d+)$/.exec(id);
+  return match ? Number(match[1]) : 0;
+}
+
+/** 进页面时恢复最近对话；seq 接着已有的最大编号，避免新消息 id 撞车 */
+function restoreHistory(): void {
+  const restored = loadChatHistory();
+  if (restored.length === 0) return;
+  bubbles.value = restored.map((message) => ({ ...message }));
+  seq = restored.reduce((max, message) => Math.max(max, seqFromId(message.id)), 0);
+  void nextTick(() => scrollToBottom());
+}
+
+function clearHistory(): void {
+  uni.showModal({
+    title: '清空聊天记录？',
+    content: '只删除这台设备上的对话，库存和其他数据不受影响。',
+    confirmText: '清空',
+    confirmColor: '#b8433a',
+    success: (res) => {
+      if (!res.confirm) return;
+      clearChatHistory();
+      bubbles.value = [];
+      seq = 0;
+      scrollInto.value = '';
+      uni.showToast({ title: '已清空', icon: 'none' });
+    },
+  });
+}
+
 function send(preset?: string): void {
   const question = (preset ?? input.value).trim();
   if (!question || sending.value) return;
   input.value = '';
-  const user: Bubble = { id: `m${++seq}`, role: 'user', text: question };
+  const at = Date.now();
+  const user: Bubble = { id: `m${++seq}`, role: 'user', text: question, at };
   const reply: Bubble = {
     id: `m${++seq}`,
     role: 'assistant',
     text: '正在翻库存…',
     state: 'pending',
     question,
+    at,
   };
   bubbles.value.push(user, reply);
+  // 用户这句先落盘：回答过程中被杀进程，至少问题还在
+  persistHistory();
   scrollToBottom();
   void askInto(question, reply.id);
 }
@@ -291,6 +350,9 @@ function openCapture(): void {
               <view v-for="item in SUGGESTIONS" :key="item" class="chip" @click="send(item)">
                 {{ item }}
               </view>
+            </view>
+            <view v-if="bubbles.length" class="intro__clear" @click="clearHistory">
+              清空聊天记录
             </view>
           </view>
 
@@ -622,6 +684,14 @@ function openCapture(): void {
   color: #9a6514;
   font-size: 24rpx;
   box-shadow: 0 2rpx 12rpx rgba(96, 72, 30, 0.05);
+}
+
+.intro__clear {
+  margin-top: 4rpx;
+  padding: 12rpx 0;
+  font-size: 24rpx;
+  color: rgba(122, 90, 58, 0.55);
+  text-decoration: underline;
 }
 
 .row {

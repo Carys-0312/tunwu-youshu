@@ -134,8 +134,8 @@ export async function askAssistant(
 }
 
 /**
- * 流式问答：H5 用 fetch + SSE 逐字渲染；App 端暂不支持 SSE，
- * 回退到普通接口，一次性把完整回答交给 onDelta。
+ * 流式问答：H5 用 fetch + SSE，App 用 uni.connectSocket + WebSocket，
+ * 两条链路失败且一个字都没收到时回退普通接口。
  */
 export async function askAssistantStream(
   question: string,
@@ -165,10 +165,115 @@ export async function askAssistantStream(
   // #endif
 
   // #ifndef H5
-  const answer = await askAssistant(question, history, rows, weekly, persona);
-  onDelta(answer);
-  return answer;
+  let appReceived = false;
+  try {
+    return await streamApp(payload, who, (delta) => {
+      appReceived = true;
+      onDelta(delta);
+    });
+  } catch (err) {
+    if (appReceived) throw err;
+    const answer = await askAssistant(question, history, rows, weekly, persona);
+    onDelta(answer);
+    return answer;
+  }
   // #endif
+}
+
+/** 服务端 WebSocket 地址：http(s) 换成 ws(s)，路径和 SSE 分开 */
+function wsUrl(): string {
+  return `${API_BASE.replace(/^http/, 'ws')}/api/assistant/chat/ws`;
+}
+
+/**
+ * App 端流式：uni-app 的 App 运行时不支持标准 SSE，改用 WebSocket。
+ * 一次连接只问一个问题：delta 逐字回调，done 结束，error 交给页面展示。
+ */
+function streamApp(
+  payload: Record<string, unknown>,
+  who: string,
+  onDelta: (text: string) => void,
+): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    let answer = '';
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const task = uni.connectSocket({
+      url: wsUrl(),
+      // 部分平台不传 complete 不会真正发起连接
+      complete: () => {},
+    });
+
+    const finish = (done: () => void) => {
+      if (settled) return;
+      settled = true;
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      try {
+        task.close({});
+      } catch {
+        // 已经关闭
+      }
+      done();
+    };
+
+    timer = setTimeout(
+      () => finish(() => reject(new Error(`连不上${who}，检查网络后再试`))),
+      45000,
+    );
+
+    task.onOpen(() => {
+      task.send({
+        data: JSON.stringify(payload),
+        fail: () => finish(() => reject(new Error(`连不上${who}，检查网络后再试`))),
+      });
+    });
+
+    task.onMessage((res) => {
+      if (settled) return;
+      const raw = typeof res.data === 'string' ? res.data : '';
+      if (!raw) return;
+
+      let frame: { type?: string; text?: string; message?: string };
+      try {
+        frame = JSON.parse(raw) as { type?: string; text?: string; message?: string };
+      } catch {
+        return;
+      }
+
+      if (frame.type === 'delta') {
+        const text = typeof frame.text === 'string' ? frame.text : '';
+        if (text) {
+          answer += text;
+          onDelta(text);
+        }
+      } else if (frame.type === 'done') {
+        if (!answer.trim()) {
+          finish(() => reject(new Error(`${who}没返回内容，换个问法试试`)));
+          return;
+        }
+        finish(() => resolve(answer));
+      } else if (frame.type === 'error') {
+        const message = typeof frame.message === 'string' ? frame.message : '';
+        finish(() => reject(new Error(message || `${who}暂时连不上模型，稍后再问`)));
+      }
+    });
+
+    task.onError(() => {
+      finish(() => reject(new Error(`连不上${who}，检查网络后再试`)));
+    });
+
+    task.onClose(() => {
+      // 正常结束会先收到 done；这里兜底服务端提前断开
+      finish(() => {
+        if (answer.trim()) resolve(answer);
+        else reject(new Error(`连不上${who}，检查网络后再试`));
+      });
+    });
+  });
 }
 
 async function streamH5(

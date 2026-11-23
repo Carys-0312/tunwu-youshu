@@ -29,7 +29,9 @@ export interface Batch {
   production_date: string | null;
   expiry_date: string | null;
   opened_at: string | null;
+  /** 开封后保质期，二选一；按天更精确，按月兼容旧数据 */
   pao_months: number | null;
+  pao_days: number | null;
   quantity: number;
 }
 

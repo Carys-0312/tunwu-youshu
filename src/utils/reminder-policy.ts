@@ -5,6 +5,8 @@ export interface ShelfLifeSource {
   expiry_date: string | null;
   opened_at: string | null;
   pao_months: number | null;
+  /** 按天的开封后保质期（新数据优先用这个） */
+  pao_days?: number | null;
 }
 
 /** 包装上的总保质期天数：到期日 - 生产日期；日期缺失或倒挂时返回 null */
@@ -22,8 +24,11 @@ export function batchShelfLifeDays(batch: ShelfLifeSource): number | null {
   const printed = shelfLifeDays(batch.production_date, batch.expiry_date);
   if (printed !== null) return printed;
   // 没有包装到期日时，开封后保质期才是实际会用到的那段
-  if (!batch.expiry_date && batch.opened_at && batch.pao_months && batch.pao_months > 0) {
-    return Math.round(batch.pao_months * 30.44);
+  if (!batch.expiry_date && batch.opened_at) {
+    if (batch.pao_days && batch.pao_days > 0) return batch.pao_days;
+    if (batch.pao_months && batch.pao_months > 0) {
+      return Math.round(batch.pao_months * 30.44);
+    }
   }
   return null;
 }

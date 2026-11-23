@@ -66,9 +66,11 @@ export class SqliteDriver implements DbDriver {
       await invoke({ name: DB_NAME, sql });
     }
 
-    // v1 -> v2：Item 增加储存条件字段；v2 -> v3：增加每件热量。列已存在时会报错，忽略即可。
+    // v1 -> v2：Item 增加储存条件字段；v2 -> v3：增加每件热量；
+    // v3 -> v4：批次增加按天的开封后保质期。列已存在时会报错，忽略即可。
     await this.tryExec('ALTER TABLE item ADD COLUMN storage_text TEXT');
     await this.tryExec('ALTER TABLE item ADD COLUMN calories INTEGER');
+    await this.tryExec('ALTER TABLE batch ADD COLUMN pao_days INTEGER');
 
     await invoke({ name: DB_NAME, sql: `PRAGMA user_version = ${DB_VERSION}` });
     this.ready = true;

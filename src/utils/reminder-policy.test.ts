@@ -36,6 +36,26 @@ describe('batchShelfLifeDays', () => {
     })).toBe(30);
   });
 
+  it('按天的开封后保质期优先于按月', () => {
+    expect(batchShelfLifeDays({
+      production_date: null,
+      expiry_date: null,
+      opened_at: '2026-11-20',
+      pao_months: 1,
+      pao_days: 3,
+    })).toBe(3);
+  });
+
+  it('按天为 0 时退回按月计算', () => {
+    expect(batchShelfLifeDays({
+      production_date: null,
+      expiry_date: null,
+      opened_at: '2026-11-01',
+      pao_months: 1,
+      pao_days: 0,
+    })).toBe(30);
+  });
+
   it('没有任何依据时返回 null', () => {
     expect(batchShelfLifeDays({
       production_date: null,

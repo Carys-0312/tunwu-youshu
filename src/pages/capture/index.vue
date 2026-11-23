@@ -428,6 +428,7 @@ async function save(): Promise<void> {
       production_date: form.production_date || null,
       expiry_date: effectiveExpiry.value || null,
       pao_months: null,
+      pao_days: null,
     });
     // 只上报字段是否被改，不上传原文；失败也不影响入库
     reportRecognitionFeedback(originalRecognition.value, {

@@ -1,6 +1,6 @@
 {
   "name": "tunwu-youshu",
-  "version": "0.1.29",
+  "version": "0.1.30",
   "private": true,
   "description": "本地优先的宿舍物品与临期管理 App：拍照入库、库存分类、临期提醒、月报和 AI 管家。",
   "license": "Apache-2.0",

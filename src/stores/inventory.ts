@@ -146,6 +146,31 @@ export const useInventoryStore = defineStore('inventory', {
       return result;
     },
 
+    /**
+     * 批量买好：逐条处理，最后只刷新一次列表。
+     * 单条失败不回滚已成功的条目，把失败数量交给页面提示。
+     */
+    async buyShoppingMany(
+      ids: string[],
+      restock: boolean,
+    ): Promise<{ bought: number; restocked: number; failed: number }> {
+      let bought = 0;
+      let restocked = 0;
+      let failed = 0;
+      for (const id of ids) {
+        try {
+          const result = await buyShoppingItem(id, restock);
+          bought += 1;
+          if (result.restocked) restocked += 1;
+        } catch (err) {
+          failed += 1;
+          console.warn('[shopping] 批量买好失败', id, err);
+        }
+      }
+      await this.refresh();
+      return { bought, restocked, failed };
+    },
+
     /** 把已买条目放回待购，回库过的会同时扣回库存 */
     async restoreShopping(id: string): Promise<{ reversed: boolean }> {
       const result = await restoreShoppingItem(id);

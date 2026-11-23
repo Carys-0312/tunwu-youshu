@@ -61,6 +61,82 @@ function toast(title: string): void {
   uni.showToast({ title, icon: 'none' });
 }
 
+/* ---- 批量买好 ---- */
+const selecting = ref(false);
+const selected = ref<string[]>([]);
+const bulkBusy = ref(false);
+
+const selectedCount = computed(() => selected.value.length);
+const allSelected = computed(
+  () =>
+    pending.value.length > 0 &&
+    pending.value.every((item) => selected.value.includes(item.id)),
+);
+
+function switchTab(next: 'pending' | 'done'): void {
+  tab.value = next;
+  selecting.value = false;
+  selected.value = [];
+}
+
+function toggleSelect(): void {
+  selecting.value = !selecting.value;
+  if (!selecting.value) selected.value = [];
+}
+
+function toggleOne(id: string): void {
+  selected.value = selected.value.includes(id)
+    ? selected.value.filter((entry) => entry !== id)
+    : [...selected.value, id];
+}
+
+function toggleAll(): void {
+  selected.value = allSelected.value ? [] : pending.value.map((item) => item.id);
+}
+
+/** 返回 true = 回库，false = 只标记，null = 取消 */
+function chooseRestock(stockCount: number): Promise<boolean | null> {
+  return new Promise((resolve) => {
+    uni.showActionSheet({
+      itemList: [`回库并标记买好（${stockCount} 条有库存）`, '只标记买好'],
+      success: (res) => resolve(res.tapIndex === 0),
+      fail: () => resolve(null),
+    });
+  });
+}
+
+async function buySelected(): Promise<void> {
+  if (bulkBusy.value || selectedCount.value === 0) return;
+  const items = pending.value.filter((item) => selected.value.includes(item.id));
+  const stockCount = items.filter((item) => item.item_id && stockByItem.value.get(item.item_id)).length;
+
+  let restock = false;
+  if (stockCount > 0) {
+    const choice = await chooseRestock(stockCount);
+    if (choice === null) return;
+    restock = choice;
+  }
+
+  bulkBusy.value = true;
+  try {
+    const result = await store.buyShoppingMany(
+      items.map((item) => item.id),
+      restock,
+    );
+    await refreshRestocked();
+    selected.value = [];
+    selecting.value = false;
+    const parts = [`已买好 ${result.bought} 条`];
+    if (result.restocked > 0) parts.push(`回库 ${result.restocked} 条`);
+    if (result.failed > 0) parts.push(`${result.failed} 条失败`);
+    toast(parts.join(' · '));
+  } catch (err) {
+    toast(err instanceof Error ? err.message : '批量操作失败');
+  } finally {
+    bulkBusy.value = false;
+  }
+}
+
 function confirm(
   title: string,
   content: string,
@@ -221,11 +297,14 @@ async function removeEditing(): Promise<void> {
 <template>
   <view class="page">
     <view class="tabs">
-      <view :class="['tab', tab === 'pending' ? 'tab--active' : '']" @click="tab = 'pending'">
+      <view :class="['tab', tab === 'pending' ? 'tab--active' : '']" @click="switchTab('pending')">
         待购 <text class="tab__count">{{ pending.length }}</text>
       </view>
-      <view :class="['tab', tab === 'done' ? 'tab--active' : '']" @click="tab = 'done'">
+      <view :class="['tab', tab === 'done' ? 'tab--active' : '']" @click="switchTab('done')">
         已买 <text class="tab__count">{{ done.length }}</text>
+      </view>
+      <view v-if="tab === 'pending' && pending.length" class="tabs__bulk" @click="toggleSelect">
+        {{ selecting ? '完成' : '批量' }}
       </view>
     </view>
 
@@ -240,17 +319,26 @@ async function removeEditing(): Promise<void> {
             <view
               v-for="item in group.items"
               :key="item.id"
-              :class="['row', busyId === item.id ? 'row--busy' : '']"
+              :class="[
+                'row',
+                busyId === item.id ? 'row--busy' : '',
+                selecting && selected.includes(item.id) ? 'row--selected' : '',
+              ]"
             >
-              <view class="check" @click.stop="buy(item)"></view>
-              <view class="row__main" @click="openEdit(item)">
+              <view
+                :class="['check', selecting && selected.includes(item.id) ? 'check--on' : '']"
+                @click.stop="selecting ? toggleOne(item.id) : buy(item)"
+              >
+                <text v-if="selecting && selected.includes(item.id)" class="check__mark">✓</text>
+              </view>
+              <view class="row__main" @click="selecting ? toggleOne(item.id) : openEdit(item)">
                 <view class="row__name">{{ item.name }}</view>
                 <view class="row__sub">
                   买 {{ item.qty }} 件
                   <text v-if="stockHint(item)" class="row__stock"> · {{ stockHint(item) }}</text>
                 </view>
               </view>
-              <text class="row__edit" @click.stop="openEdit(item)">编辑</text>
+              <text v-if="!selecting" class="row__edit" @click.stop="openEdit(item)">编辑</text>
             </view>
           </view>
         </view>
@@ -289,7 +377,22 @@ async function removeEditing(): Promise<void> {
     </template>
 
     <view v-if="tab === 'pending'" class="footer">
-      <view class="footer__btn" @click="openAdd">＋ 添加待购</view>
+      <view v-if="selecting" class="footer__row">
+        <view class="footer__selectall" @click="toggleAll">
+          {{ allSelected ? '取消全选' : '全选' }}
+        </view>
+        <view
+          :class="[
+            'footer__btn',
+            'footer__btn--main',
+            selectedCount === 0 || bulkBusy ? 'footer__btn--off' : '',
+          ]"
+          @click="buySelected"
+        >
+          {{ bulkBusy ? '处理中…' : `买好 ${selectedCount} 条` }}
+        </view>
+      </view>
+      <view v-else class="footer__btn" @click="openAdd">＋ 添加待购</view>
     </view>
 
     <!-- 添加 / 编辑弹层 -->
@@ -360,6 +463,15 @@ async function removeEditing(): Promise<void> {
   opacity: 0.7;
 }
 
+.tabs__bulk {
+  display: flex;
+  align-items: center;
+  padding: 0 20rpx;
+  font-size: 24rpx;
+  color: #9a6514;
+  flex-shrink: 0;
+}
+
 .group {
   margin-bottom: 8rpx;
 }
@@ -396,6 +508,11 @@ async function removeEditing(): Promise<void> {
 
 .row--busy {
   opacity: 0.45;
+}
+
+.row--selected {
+  background: rgba(154, 101, 20, 0.06);
+  border-radius: 14rpx;
 }
 
 .check {
@@ -475,6 +592,30 @@ async function removeEditing(): Promise<void> {
   border-radius: 999rpx;
   font-size: 28rpx;
   box-shadow: 0 12rpx 28rpx rgba(58, 43, 22, 0.18);
+}
+
+.footer__row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.footer__selectall {
+  flex-shrink: 0;
+  padding: 26rpx 30rpx;
+  border-radius: 999rpx;
+  background: #ffffff;
+  color: #7a633f;
+  font-size: 26rpx;
+  box-shadow: 0 8rpx 20rpx rgba(58, 43, 22, 0.08);
+}
+
+.footer__btn--main {
+  flex: 1;
+}
+
+.footer__btn--off {
+  opacity: 0.45;
 }
 
 /* 添加 / 编辑弹层 */

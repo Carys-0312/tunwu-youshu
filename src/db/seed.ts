@@ -217,19 +217,19 @@ export function buildSeedRows(): Record<TableName, Row[]> {
   ];
 
   const batches: Row[] = [
-    { id: 'b-milk-1', item_id: 'item-milk', production_date: addDays(-20), expiry_date: addDays(5), opened_at: null, pao_months: null, quantity: 6 },
-    { id: 'b-juice-1', item_id: 'item-juice', production_date: addDays(-10), expiry_date: addDays(20), opened_at: null, pao_months: null, quantity: 2 },
-    { id: 'b-apple-1', item_id: 'item-apple', production_date: null, expiry_date: addDays(14), opened_at: null, pao_months: null, quantity: 3 },
-    { id: 'b-dumpling-1', item_id: 'item-dumpling', production_date: addDays(-30), expiry_date: addDays(120), opened_at: null, pao_months: null, quantity: 1 },
-    { id: 'b-amox-1', item_id: 'item-amox', production_date: addDays(-200), expiry_date: addDays(45), opened_at: null, pao_months: null, quantity: 2 },
-    { id: 'b-vc-1', item_id: 'item-vc', production_date: addDays(-400), expiry_date: addDays(-12), opened_at: null, pao_months: null, quantity: 1 },
-    { id: 'b-tissue-1', item_id: 'item-tissue', production_date: null, expiry_date: null, opened_at: null, pao_months: null, quantity: 3 },
-    { id: 'b-chips-1', item_id: 'item-chips', production_date: addDays(-30), expiry_date: addDays(60), opened_at: null, pao_months: null, quantity: 2 },
-    { id: 'b-mask-1', item_id: 'item-mask', production_date: null, expiry_date: null, opened_at: null, pao_months: null, quantity: 40 },
-    { id: 'b-soy-1', item_id: 'item-soy', production_date: null, expiry_date: null, opened_at: addDays(-60), pao_months: 6, quantity: 1 },
-    { id: 'b-det-1', item_id: 'item-detergent', production_date: null, expiry_date: null, opened_at: addDays(-15), pao_months: 12, quantity: 1 },
-    { id: 'b-coffee-1', item_id: 'item-coffee', production_date: addDays(-45), expiry_date: addDays(180), opened_at: null, pao_months: null, quantity: 8 },
-    { id: 'b-egg-1', item_id: 'item-egg', production_date: null, expiry_date: addDays(12), opened_at: null, pao_months: null, quantity: 10 },
+    { id: 'b-milk-1', item_id: 'item-milk', production_date: addDays(-20), expiry_date: addDays(5), opened_at: null, pao_months: null, pao_days: null, quantity: 6 },
+    { id: 'b-juice-1', item_id: 'item-juice', production_date: addDays(-10), expiry_date: addDays(20), opened_at: null, pao_months: null, pao_days: null, quantity: 2 },
+    { id: 'b-apple-1', item_id: 'item-apple', production_date: null, expiry_date: addDays(14), opened_at: null, pao_months: null, pao_days: null, quantity: 3 },
+    { id: 'b-dumpling-1', item_id: 'item-dumpling', production_date: addDays(-30), expiry_date: addDays(120), opened_at: null, pao_months: null, pao_days: null, quantity: 1 },
+    { id: 'b-amox-1', item_id: 'item-amox', production_date: addDays(-200), expiry_date: addDays(45), opened_at: null, pao_months: null, pao_days: null, quantity: 2 },
+    { id: 'b-vc-1', item_id: 'item-vc', production_date: addDays(-400), expiry_date: addDays(-12), opened_at: null, pao_months: null, pao_days: null, quantity: 1 },
+    { id: 'b-tissue-1', item_id: 'item-tissue', production_date: null, expiry_date: null, opened_at: null, pao_months: null, pao_days: null, quantity: 3 },
+    { id: 'b-chips-1', item_id: 'item-chips', production_date: addDays(-30), expiry_date: addDays(60), opened_at: null, pao_months: null, pao_days: null, quantity: 2 },
+    { id: 'b-mask-1', item_id: 'item-mask', production_date: null, expiry_date: null, opened_at: null, pao_months: null, pao_days: null, quantity: 40 },
+    { id: 'b-soy-1', item_id: 'item-soy', production_date: null, expiry_date: null, opened_at: addDays(-60), pao_months: 6, pao_days: null, quantity: 1 },
+    { id: 'b-det-1', item_id: 'item-detergent', production_date: null, expiry_date: null, opened_at: addDays(-15), pao_months: 12, pao_days: null, quantity: 1 },
+    { id: 'b-coffee-1', item_id: 'item-coffee', production_date: addDays(-45), expiry_date: addDays(180), opened_at: null, pao_months: null, pao_days: null, quantity: 8 },
+    { id: 'b-egg-1', item_id: 'item-egg', production_date: null, expiry_date: addDays(12), opened_at: null, pao_months: null, pao_days: null, quantity: 10 },
   ];
 
   /**

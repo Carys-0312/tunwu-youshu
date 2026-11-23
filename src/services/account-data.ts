@@ -10,6 +10,7 @@
  * 避免「提示完但登录失败」时误删数据。
  */
 
+import { clearChatHistory } from './chat-history';
 import { countLocalData, clearLocalData, getLocalOwner, setLocalOwner } from './local-data-owner';
 
 export type LocalDataPlan = 'keep' | 'clear' | 'cancel';
@@ -131,6 +132,11 @@ export async function planLocalDataForExistingAccount(
 /** 认证成功后执行计划：该清就清，然后把本机数据记为这个账号的 */
 export async function applyLocalDataPlan(plan: LocalDataPlan, userId: string): Promise<void> {
   if (plan === 'cancel') return;
-  if (plan === 'clear') await clearLocalData();
+  if (plan === 'clear') {
+    // 聊天记录也是本机数据：用户确认清除时一并删掉，避免留在设备上
+    const previous = getLocalOwner();
+    if (previous !== undefined) clearChatHistory(previous ?? 'guest');
+    await clearLocalData();
+  }
   setLocalOwner(userId);
 }

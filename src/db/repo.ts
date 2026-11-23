@@ -131,6 +131,7 @@ async function ensureItemBatches(target: DbDriver): Promise<void> {
       expiry_date: null,
       opened_at: null,
       pao_months: null,
+      pao_days: null,
       quantity: item.quantity,
     }));
     await target.putMany('batch', rows.map((row) => ({ ...row })));
@@ -223,10 +224,15 @@ export async function replaceAllTables(
  */
 export function effectiveExpiry(batch: Batch): string | null {
   const printed = batch.expiry_date || null;
-  const opened =
-    batch.opened_at && batch.pao_months
-      ? addMonths(batch.opened_at.slice(0, 10), batch.pao_months)
-      : null;
+  let opened: string | null = null;
+  if (batch.opened_at) {
+    const openedAt = batch.opened_at.slice(0, 10);
+    if (batch.pao_days && batch.pao_days > 0) {
+      opened = addDays(batch.pao_days, new Date(openedAt));
+    } else if (batch.pao_months && batch.pao_months > 0) {
+      opened = addMonths(openedAt, batch.pao_months);
+    }
+  }
 
   if (printed && opened) return printed < opened ? printed : opened;
   return printed ?? opened;
@@ -364,6 +370,7 @@ export async function buyShoppingItem(id: string, restock: boolean): Promise<Buy
         expiry_date: null,
         opened_at: null,
         pao_months: null,
+        pao_days: null,
         quantity: qty,
       };
       const record: Consumption = {
@@ -496,6 +503,8 @@ export interface NewItemInput {
   production_date: string | null;
   expiry_date: string | null;
   pao_months: number | null;
+  /** 按天的开封后保质期；和 pao_months 二选一 */
+  pao_days: number | null;
 }
 
 function makeId(prefix: string): string {
@@ -529,6 +538,7 @@ export async function createItem(input: NewItemInput): Promise<string> {
     expiry_date: input.expiry_date,
     opened_at: null,
     pao_months: input.pao_months,
+    pao_days: input.pao_days,
     quantity: input.quantity,
   };
   await db().putMany('batch', [{ ...batch }]);
@@ -666,6 +676,7 @@ export async function consumeItem(itemId: string, amount = 1): Promise<ConsumeRe
       expiry_date: null,
       opened_at: null,
       pao_months: null,
+      pao_days: null,
       quantity: stockBefore,
     };
     await target.putMany('batch', [{ ...batch }]);
@@ -811,7 +822,7 @@ export async function loadItemDetail(itemId: string): Promise<ItemDetail | null>
 /** 改批次的日期 / 开封信息 */
 export async function updateBatch(
   batchId: string,
-  patch: Partial<Pick<Batch, 'expiry_date' | 'opened_at' | 'pao_months'>>,
+  patch: Partial<Pick<Batch, 'expiry_date' | 'opened_at' | 'pao_months' | 'pao_days'>>,
 ): Promise<void> {
   const rows = await db().getAll<Batch>('batch');
   const batch = rows.find((row) => row.id === batchId);

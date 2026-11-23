@@ -29,9 +29,15 @@ const imageBroken = ref(false);
 const hasPhoto = computed(() => !!detail.value?.item.image && !imageBroken.value);
 const { undoState, startUndo, undo } = useConsumeUndo(load);
 
-/** 开封后保质期的预设选项，0 表示只记录开封 */
-const PAO_LABELS = ['只记录开封', '1 个月', '3 个月', '6 个月', '12 个月', '24 个月'];
-const PAO_MONTHS = [0, 1, 3, 6, 12, 24];
+/** 开封后保质期预设：按天更适合牛奶、熟食、眼药水等短周期 */
+const PAO_DAY_OPTIONS = [1, 3, 5, 7, 14, 30];
+const PAO_MONTH_OPTIONS = [1, 3, 6, 12, 24];
+
+function paoText(batch: BatchView): string {
+  if (batch.pao_days && batch.pao_days > 0) return `开封后 ${batch.pao_days} 天`;
+  if (batch.pao_months && batch.pao_months > 0) return `开封后 ${batch.pao_months} 个月`;
+  return '';
+}
 
 onLoad((query) => {
   itemId.value = String((query as Record<string, unknown>)?.id ?? '');
@@ -168,46 +174,81 @@ function changeExpiry(batch: BatchView, e: any): void {
     .catch(() => toast('保存失败'));
 }
 
-/** 记录/修改开封；months=0 表示只记录开封，不设开封后保质期 */
-async function saveOpened(batch: BatchView, months: number, resetDate: boolean): Promise<void> {
+/** 记录/修改开封；pao 为空表示只记录开封，不设开封后保质期 */
+async function saveOpened(
+  batch: BatchView,
+  pao: { days: number | null; months: number | null },
+  resetDate: boolean,
+): Promise<void> {
   try {
     await updateBatch(batch.id, {
       opened_at: resetDate ? todayISO() : batch.opened_at,
-      pao_months: months > 0 ? months : null,
+      pao_days: pao.days,
+      pao_months: pao.months,
     });
     await load();
-    toast(months > 0 ? `已开封，按 ${months} 个月算` : '已记录开封');
+    const label = pao.days ? `${pao.days} 天` : pao.months ? `${pao.months} 个月` : '';
+    toast(label ? `已开封，按 ${label} 算` : '已记录开封');
   } catch {
     toast('保存失败');
   }
 }
 
-function markOpened(batch: BatchView): void {
-  uni.showActionSheet({
-    itemList: PAO_LABELS,
-    success: (res) => {
-      void saveOpened(batch, PAO_MONTHS[res.tapIndex] ?? 0, true);
-    },
+/** 两级选择：先选按天/按月/只记录，再选具体时长 */
+function pickPao(extra: string[] = []): Promise<
+  { days: number | null; months: number | null } | 'clear' | null
+> {
+  return new Promise((resolve) => {
+    uni.showActionSheet({
+      itemList: ['按天', '按月', '只记录开封', ...extra],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          uni.showActionSheet({
+            itemList: PAO_DAY_OPTIONS.map((days) => `${days} 天`),
+            success: (pick) =>
+              resolve({ days: PAO_DAY_OPTIONS[pick.tapIndex] ?? 1, months: null }),
+            fail: () => resolve(null),
+          });
+        } else if (res.tapIndex === 1) {
+          uni.showActionSheet({
+            itemList: PAO_MONTH_OPTIONS.map((months) => `${months} 个月`),
+            success: (pick) =>
+              resolve({ days: null, months: PAO_MONTH_OPTIONS[pick.tapIndex] ?? 1 }),
+            fail: () => resolve(null),
+          });
+        } else if (res.tapIndex === 2) {
+          resolve({ days: null, months: null });
+        } else if (extra.length > 0 && res.tapIndex === 3) {
+          resolve('clear');
+        } else {
+          resolve(null);
+        }
+      },
+      fail: () => resolve(null),
+    });
   });
 }
 
+async function markOpened(batch: BatchView): Promise<void> {
+  const pao = await pickPao();
+  if (!pao || pao === 'clear') return;
+  await saveOpened(batch, pao, true);
+}
+
 /** 已经开封的行点进来：改开封后保质期，或者清掉这次开封记录 */
-function editOpened(batch: BatchView): void {
-  uni.showActionSheet({
-    itemList: [...PAO_LABELS, '清除开封记录'],
-    success: (res) => {
-      if (res.tapIndex === PAO_LABELS.length) {
-        clearOpened(batch);
-        return;
-      }
-      void saveOpened(batch, PAO_MONTHS[res.tapIndex] ?? 0, false);
-    },
-  });
+async function editOpened(batch: BatchView): Promise<void> {
+  const pao = await pickPao(['清除开封记录']);
+  if (!pao) return;
+  if (pao === 'clear') {
+    await clearOpened(batch);
+    return;
+  }
+  await saveOpened(batch, pao, false);
 }
 
 async function clearOpened(batch: BatchView): Promise<void> {
   try {
-    await updateBatch(batch.id, { opened_at: null, pao_months: null });
+    await updateBatch(batch.id, { opened_at: null, pao_months: null, pao_days: null });
     await load();
     toast('已清除开封记录');
   } catch {
@@ -281,8 +322,8 @@ async function clearOpened(batch: BatchView): Promise<void> {
             <text class="batch__label">实际到期</text>
             <text class="batch__value batch__value--real">
               {{ batch.expiry }}
-              <text v-if="batch.pao_months" class="batch__note">
-                · 按开封后 {{ batch.pao_months }} 个月
+              <text v-if="paoText(batch)" class="batch__note">
+                · {{ paoText(batch) }}
               </text>
             </text>
           </view>
@@ -300,7 +341,7 @@ async function clearOpened(batch: BatchView): Promise<void> {
           <view class="batch__row">
             <text class="batch__label">开封</text>
             <text v-if="batch.opened_at" class="batch__value batch__link" @click="editOpened(batch)">
-              {{ batch.opened_at }}<text v-if="batch.pao_months"> · 开封后 {{ batch.pao_months }} 个月</text>
+              {{ batch.opened_at }}<text v-if="paoText(batch)"> · {{ paoText(batch) }}</text>
             </text>
             <text v-else class="batch__link" @click="markOpened(batch)">标记今天开封</text>
           </view>
