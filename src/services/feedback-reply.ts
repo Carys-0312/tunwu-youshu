@@ -12,6 +12,7 @@ import {
   systemNotifyRequestPermission,
   systemNotifySchedule,
 } from './system-notify';
+import { isPushReady } from './push';
 
 const SEEN_PREFIX = 'feedback_reply_seen_v1_';
 const NOTIFIED_PREFIX = 'feedback_reply_notified_v1_';
@@ -56,6 +57,10 @@ export function markFeedbackRepliesSeen(items: MyFeedbackItem[]): void {
 }
 
 async function notifyNewReply(count: number): Promise<void> {
+  // 服务端已配好 UniPush 时，回信由服务端推送；这里只负责把状态记为已提醒，
+  // 避免同一条回信既弹系统推送又弹本地通知。
+  if (isPushReady()) return;
+
   const title = '小囤回信了';
   const body = count > 1
     ? `你有 ${count} 条反馈收到了回复，点开看看`

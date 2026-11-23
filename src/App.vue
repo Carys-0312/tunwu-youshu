@@ -5,6 +5,7 @@ import { usePersonaStore } from '@/stores/persona';
 import { configureAutoSync, runAutoSync, startAutoSync } from '@/services/auto-sync';
 import { scheduleLocalReminders } from '@/services/reminders';
 import { checkFeedbackReplies, startFeedbackReplyWatch } from '@/services/feedback-reply';
+import { bindPushMessage, registerPushClient } from '@/services/push';
 import { logError, logDetail, logInfo } from '@/services/logger';
 import {
   systemNotifyConsumeLaunchPayload,
@@ -65,6 +66,9 @@ onLaunch(() => {
   }
   openFromNotification();
   bindPushClick();
+  bindPushMessage();
+  // 已登录时把设备 CID 登记到服务端，管理员回信就能走系统推送
+  void registerPushClient();
   // 回信提醒：启动后查一次，并在前台每 5 分钟检查
   startFeedbackReplyWatch();
   // iOS 的授权状态是异步查询的，启动时先刷新一次缓存
@@ -89,6 +93,7 @@ onLaunch(() => {
 // 回到前台时顺带看一眼服务器有没有更新的数据；切后台前尽量把本机改动推上去
 onShow(() => {
   openFromNotification();
+  void registerPushClient();
   void checkFeedbackReplies();
   syncReminderSchedule();
   void runAutoSync({ checkRemote: true });

@@ -27,6 +27,7 @@ import {
   type SyncStatus,
 } from '@/services/sync';
 import { fetchMe, getSession, logout, type AuthSession } from '@/services/auth';
+import { unregisterPushClient } from '@/services/push';
 import { rememberSync, lastSyncAt, runAutoSync } from '@/services/auto-sync';
 import TabBar from '@/components/TabBar.vue';
 import FeatureTour from '@/components/FeatureTour.vue';
@@ -278,6 +279,7 @@ function doLogout(): void {
     confirmText: '退出',
     success: (res) => {
       if (!res.confirm) return;
+      void unregisterPushClient();
       logout();
       session.value = null;
       syncInfo.value = null;

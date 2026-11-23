@@ -3,6 +3,7 @@ import { computed, reactive, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { CATEGORIES, displayCategory } from '@/constants/categories';
 import { RecognizeError, recognizeImages, type RecognizedItem } from '@/services/recognize';
+import { reportRecognitionFeedback } from '@/services/recognition-feedback';
 import { persistImage } from '@/services/item-image';
 import { useInventoryStore } from '@/stores/inventory';
 import { describeDays, todayISO } from '@/utils/date';
@@ -23,6 +24,8 @@ const recognizing = ref(false);
 const recognized = ref(false);
 const saving = ref(false);
 const confidence = ref<RecognizedItem['confidence'] | null>(null);
+/** AI 原始结果，保存时用来判断用户改了哪些字段（只上报布尔标记） */
+const originalRecognition = ref<RecognizedItem | null>(null);
 /** 模型对日期来源的一句话说明，显示在核对提示下面 */
 const dateNote = ref('');
 /** P0 分类提示：模型原始分类、是否属于内置分类、选择理由 */
@@ -179,6 +182,7 @@ function removeImage(index: number): void {
     recognizing.value = false;
     recognized.value = false;
     confidence.value = null;
+    originalRecognition.value = null;
     resetCategorySuggestion();
     missingProduction.value = false;
     missingExpiry.value = false;
@@ -325,6 +329,7 @@ function resetCategorySuggestion(): void {
 }
 
 function applyRecognition(item: RecognizedItem): void {
+  originalRecognition.value = item;
   form.name = item.name;
   const idx = CATEGORIES.indexOf(item.category as (typeof CATEGORIES)[number]);
   form.categoryIndex = idx >= 0 ? idx : CATEGORIES.length - 1;
@@ -350,6 +355,7 @@ function startManual(): void {
   problem.value = null;
   recognized.value = true;
   confidence.value = null;
+  originalRecognition.value = null;
   shots.value = [];
   dateNote.value = '';
   resetCategorySuggestion();
@@ -422,6 +428,15 @@ async function save(): Promise<void> {
       production_date: form.production_date || null,
       expiry_date: effectiveExpiry.value || null,
       pao_months: null,
+    });
+    // 只上报字段是否被改，不上传原文；失败也不影响入库
+    reportRecognitionFeedback(originalRecognition.value, {
+      name: form.name.trim(),
+      category: CATEGORIES[form.categoryIndex],
+      quantity: Math.trunc(quantity),
+      production_date: form.production_date || '',
+      expiry_date: effectiveExpiry.value || '',
+      storage_text: form.storage_text.trim(),
     });
     uni.showToast({ title: '已存入', icon: 'success' });
     setTimeout(goBack, 600);

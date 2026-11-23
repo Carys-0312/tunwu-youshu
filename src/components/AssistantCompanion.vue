@@ -9,7 +9,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useInventoryStore } from '@/stores/inventory';
 import { usePersonaStore } from '@/stores/persona';
 import { loadWeeklyStats, type WeeklyStats } from '@/db/repo';
-import { askAssistant, type ChatTurn } from '@/services/assistant';
+import { askAssistantStream, type ChatTurn } from '@/services/assistant';
 
 interface Bubble {
   id: string;
@@ -189,6 +189,7 @@ function historyBefore(replyId: string, question: string): ChatTurn[] {
 
 async function askInto(question: string, replyId: string): Promise<void> {
   sending.value = true;
+  let streamed = '';
   try {
     // 管家页常驻，别处（刚拍照入库、同步拉回）可能已经改过库存：
     // 每次提问前重新读一遍，否则「最近存了什么」会拿着旧快照回答没存。
@@ -198,17 +199,23 @@ async function askInto(question: string, replyId: string): Promise<void> {
     } catch (err) {
       console.error('[assistant] 刷新库存失败，用当前快照提问', err);
     }
-    const answer = await askAssistant(
+    const answer = await askAssistantStream(
       question,
       historyBefore(replyId, question),
       store.items,
       weekly.value,
       persona.toPersona(),
+      (delta) => {
+        streamed += delta;
+        patch(replyId, { text: streamed, state: undefined });
+        scrollToBottom();
+      },
     );
     patch(replyId, { text: answer, state: undefined });
   } catch (err) {
+    const message = err instanceof Error ? err.message : `${persona.name}出错了，稍后再问`;
     patch(replyId, {
-      text: err instanceof Error ? err.message : `${persona.name}出错了，稍后再问`,
+      text: streamed ? `${streamed}\n\n（${message}）` : message,
       state: 'error',
     });
   } finally {

@@ -30,6 +30,7 @@ npm run dev:h5
 
 ```bash
 npm run type-check
+npm test
 npm run build:h5
 ```
 

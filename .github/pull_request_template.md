@@ -11,6 +11,7 @@
 <!-- 列出复现/验证步骤，涉及 UI 时附修改前后截图 -->
 
 - [ ] `npm run type-check` 通过
+- [ ] `npm test` 通过
 - [ ] `npm run build:h5` 通过
 - [ ] 涉及 App 原生能力时，`npm run build:app` 通过并在真机验证过
 

@@ -21,6 +21,7 @@ import {
 } from '@/services/account-data';
 import { isOnboardingPending, markOnboardingPending } from '@/services/onboarding';
 import { markFeatureTourPending } from '@/services/feature-tour';
+import { registerPushClient } from '@/services/push';
 import { removeDemoRows } from '@/db/repo';
 import { logInfo, logWarn } from '@/services/logger';
 import { fetchSyncStatus } from '@/services/sync';
@@ -178,6 +179,8 @@ async function submit(): Promise<void> {
 
     await applyLocalDataPlan(plan, session.user.id);
     setAutoSyncSuspended(false);
+    // 登录态刚建立，立刻把本机 CID 绑到账号上，后台回信才能推过来
+    void registerPushClient(true);
 
     // 接下来会弹出找回码，别再叠一个 toast 挡住它
     const showingRecoveryCode = mode.value === 'register' && Boolean(session.recoveryCode);
@@ -447,6 +450,7 @@ async function settleRecoverySession(session: AuthSession, name: string): Promis
   } catch (err) {
     console.warn('[login] 清理演示数据失败', err);
   }
+  void registerPushClient(true);
   return true;
 }
 
