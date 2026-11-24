@@ -4,6 +4,7 @@
  */
 
 import { API_BASE } from './api';
+import { authHeader } from './auth';
 import { logDetail, logInfo, logWarn } from './logger';
 
 export interface RecognitionConfidence {
@@ -111,7 +112,7 @@ async function uploadH5(paths: string[], roles: string[]): Promise<RecognitionRe
     const res = await fetch(`${API_BASE}/api/recognize`, {
       method: 'POST',
       body: form,
-      headers: { Accept: 'application/json' },
+      headers: { Accept: 'application/json', ...authHeader() },
       signal: controller.signal,
     });
     return readResponse(res.status, await res.text());
@@ -160,6 +161,9 @@ function uploadApp(paths: string[], roles: string[]): Promise<RecognitionRespons
     );
 
     task.addData('roles', roles.join(','));
+    // 带上登录态，服务端调用日志才能归属到具体账号；游客没有 token 时为访客
+    const auth = authHeader();
+    if (auth.Authorization) task.setRequestHeader('Authorization', auth.Authorization);
     let added = 0;
     paths.forEach((path, index) => {
       if (task.addFile(path, { key: `image${index}`, name: `photo${index}.jpg`, mime: 'image/jpeg' })) {

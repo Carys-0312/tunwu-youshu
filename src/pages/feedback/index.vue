@@ -88,6 +88,20 @@ async function submit(): Promise<void> {
       appVersion,
       platform,
     });
+
+    // 游客又没留邮箱：后台邮箱回信和站内回信都触达不到，提交后明确提醒
+    if (!isLoggedIn() && !email) {
+      uni.showModal({
+        title: '小提醒',
+        content: '游客模式下不留邮箱地址提交的反馈是收不到管理员的回信的哦',
+        showCancel: false,
+        confirmText: '知道了',
+        success: () => uni.navigateBack(),
+        fail: () => uni.navigateBack(),
+      });
+      return;
+    }
+
     uni.showToast({ title: '收到，谢谢你', icon: 'success' });
     setTimeout(() => uni.navigateBack(), 600);
   } catch (err) {

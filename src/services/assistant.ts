@@ -3,6 +3,7 @@
  * 服务端用 LangChain4j 的工具链查这份快照，不保存任何物品数据。
  */
 import { API_BASE } from './api';
+import { authHeader } from './auth';
 import type { InventoryRow } from '@/types/models';
 import type { PetPersona } from '@/types/pet';
 import { displayCategory } from '@/constants/categories';
@@ -72,7 +73,11 @@ function post(url: string, data: unknown, who: string): Promise<RawResponse> {
       url,
       method: 'POST',
       data: data as any,
-      header: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      header: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...authHeader(),
+      },
       timeout: 45000,
       success: (res) => {
         const body = typeof res.data === 'string' ? res.data : JSON.stringify(res.data ?? '');
@@ -201,6 +206,8 @@ function streamApp(
 
     const task = uni.connectSocket({
       url: wsUrl(),
+      // 带上登录态，服务端调用日志才能归属到具体账号
+      header: authHeader(),
       // 部分平台不传 complete 不会真正发起连接
       complete: () => {},
     });
@@ -288,6 +295,7 @@ async function streamH5(
       headers: {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
+        ...authHeader(),
       },
       body: JSON.stringify(payload),
     });
