@@ -313,13 +313,6 @@ export async function loadShopping(): Promise<ShoppingItem[]> {
   return all.sort((a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name, 'zh-Hans-CN'));
 }
 
-export async function setShoppingStatus(id: string, status: ShoppingItem['status']): Promise<void> {
-  const all = await db().getAll<ShoppingItem>('shopping_item');
-  const row = all.find((s) => s.id === id);
-  if (!row) return;
-  await db().putMany('shopping_item', [{ ...row, status }]);
-}
-
 /**
  * 回库记账存在 schema_meta 里（key = shopping_restock:<待购 id>），
  * 表结构不用改；撤销「买好」时按这条记录把库存和流水还原。
@@ -909,9 +902,4 @@ export async function loadReportData(): Promise<ReportData> {
     target.getAll<Consumption>('consumption'),
   ]);
   return { items, batches, consumptions };
-}
-
-export async function loadLocations(): Promise<Location[]> {
-  const rows = await db().getAll<Location>('location');
-  return rows.sort((a, b) => a.sort - b.sort);
 }

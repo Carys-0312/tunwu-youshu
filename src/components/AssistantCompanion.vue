@@ -351,8 +351,11 @@ function openCapture(): void {
                 {{ item }}
               </view>
             </view>
-            <view v-if="bubbles.length" class="intro__clear" @click="clearHistory">
-              清空聊天记录
+            <view v-if="bubbles.length" class="intro__tools">
+              <view class="intro__clear" hover-class="intro__clear--tap" @click="clearHistory">
+                <image class="intro__clear-icon" src="/static/icons/trash-soft.svg" mode="aspectFit" />
+                <text>清空聊天记录</text>
+              </view>
             </view>
           </view>
 
@@ -686,12 +689,35 @@ function openCapture(): void {
   box-shadow: 0 2rpx 12rpx rgba(96, 72, 30, 0.05);
 }
 
+.intro__tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6rpx;
+}
+
 .intro__clear {
-  margin-top: 4rpx;
-  padding: 12rpx 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 24rpx 12rpx 20rpx;
+  border: 1rpx solid rgba(154, 101, 20, 0.18);
+  border-radius: 999rpx;
+  background: rgba(255, 253, 246, 0.72);
+  color: #8a6337;
   font-size: 24rpx;
-  color: rgba(122, 90, 58, 0.55);
-  text-decoration: underline;
+  line-height: 1.4;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+
+.intro__clear--tap {
+  background: rgba(154, 101, 20, 0.1);
+  transform: scale(0.97);
+}
+
+.intro__clear-icon {
+  width: 28rpx;
+  height: 28rpx;
+  opacity: 0.85;
 }
 
 .row {

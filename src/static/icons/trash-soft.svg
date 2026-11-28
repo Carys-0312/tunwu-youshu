@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <!-- 清空聊天记录：暖棕色线稿垃圾桶，与按钮文字同色 -->
+  <path d="M4.5 7h15" stroke="#8a6337" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M9.5 7V5.4c0-.8.6-1.4 1.4-1.4h2.2c.8 0 1.4.6 1.4 1.4V7"
+        stroke="#8a6337" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="m6.6 7 .8 11.2c.06.9.8 1.6 1.7 1.6h6c.9 0 1.64-.7 1.7-1.6L17.4 7"
+        stroke="#8a6337" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M10.2 10.6v5.7M13.8 10.6v5.7" stroke="#8a6337" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

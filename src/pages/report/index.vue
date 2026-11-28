@@ -14,7 +14,6 @@ import { loadReportData } from '@/db/repo';
 import {
   buildMonthReport,
   currentMonth,
-  filterReportSource,
   shiftMonth,
   type DayAdd,
   type DayCell,
@@ -24,7 +23,7 @@ import {
   type ReportItem,
   type ReportSource,
 } from '@/services/monthly-report';
-import { DISPLAY_CATEGORIES, displayCategory } from '@/constants/categories';
+import { displayCategory } from '@/constants/categories';
 import { itemEmoji } from '@/utils/item-visual';
 import TabBar from '@/components/TabBar.vue';
 import FeatureTour from '@/components/FeatureTour.vue';
@@ -33,14 +32,8 @@ const store = useInventoryStore();
 const month = ref(currentMonth());
 const report = ref<MonthReport | null>(null);
 const loading = ref(true);
-/** 原始三张表：切换品类时在本地重新聚合，不再读库 */
+/** 原始三张表：本地聚合用 */
 const sourceData = ref<ReportSource | null>(null);
-/** 品类筛选；「全部」不筛选 */
-const categoryFilter = ref('全部');
-/** 两月对比面板 */
-const compareOpen = ref(false);
-const compareMonth = ref(shiftMonth(currentMonth(), -1));
-const compareReport = ref<MonthReport | null>(null);
 /** 数据到位后再打开动画，避免首帧直接定死 */
 const chartReady = ref(false);
 /** 日历里点开的一天：这天用掉和存进来的东西 */
@@ -232,9 +225,8 @@ async function load(): Promise<void> {
     await store.init();
     const data = await loadReportData();
     sourceData.value = data;
-    const next = buildMonthReport(filterReportSource(data, categoryFilter.value), month.value);
+    const next = buildMonthReport(data, month.value);
     report.value = next;
-    rebuildCompare();
     // 有数据的最早年份，年份切换不早于它
     const years = [...data.items.map((item) => item.created_at), ...data.consumptions.map((row) => row.created_at)]
       .filter((stamp) => typeof stamp === 'string' && stamp.length >= 4)
@@ -257,117 +249,6 @@ async function load(): Promise<void> {
     // 卡片渲染完再量标题位置（02/03/04 是条件渲染，顺序不固定，只能按类名找）
     nextTick(measureHoverLabels);
   }
-}
-
-/* ---------------- 品类筛选 / 两月对比 ---------------- */
-
-const categoryOptions = computed<string[]>(() => {
-  const present = new Set<string>();
-  for (const item of sourceData.value?.items ?? []) present.add(displayCategory(item));
-  const known = DISPLAY_CATEGORIES.filter((name) => present.has(name));
-  const extra = [...present]
-    .filter((name) => !(DISPLAY_CATEGORIES as readonly string[]).includes(name))
-    .sort();
-  return ['全部', ...known, ...extra];
-});
-
-const compareMonthLabel = computed(() => {
-  const [year, monthNumber] = compareMonth.value.split('-');
-  return `${year} 年 ${Number(monthNumber)} 月`;
-});
-
-interface CompareRow {
-  label: string;
-  current: string;
-  other: string;
-  change: string;
-}
-
-function diffText(from: number, to: number, unit = ''): string {
-  const diff = to - from;
-  if (diff === 0) return '持平';
-  const percent = from === 0 ? '' : `（${diff > 0 ? '+' : ''}${Math.round((diff / from) * 100)}%）`;
-  return `${diff > 0 ? '+' : ''}${diff}${unit}${percent}`;
-}
-
-const compareRows = computed<CompareRow[]>(() => {
-  const current = report.value;
-  const other = compareReport.value;
-  if (!current || !other) return [];
-  return [
-    {
-      label: '消耗天数',
-      current: `${current.activeDays} 天`,
-      other: `${other.activeDays} 天`,
-      change: diffText(current.activeDays, other.activeDays, ' 天'),
-    },
-    {
-      label: '用掉件数',
-      current: `${current.consumedUnits}`,
-      other: `${other.consumedUnits}`,
-      change: diffText(current.consumedUnits, other.consumedUnits),
-    },
-    {
-      label: '买进件数',
-      current: `${current.boughtUnits}`,
-      other: `${other.boughtUnits}`,
-      change: diffText(current.boughtUnits, other.boughtUnits),
-    },
-    {
-      label: '开封批次',
-      current: `${current.openedBatches}`,
-      other: `${other.openedBatches}`,
-      change: diffText(current.openedBatches, other.openedBatches),
-    },
-    {
-      label: '新物品',
-      current: `${current.newItems}`,
-      other: `${other.newItems}`,
-      change: diffText(current.newItems, other.newItems),
-    },
-    {
-      label: '最常用',
-      current: current.top[0]?.item.name ?? '—',
-      other: other.top[0]?.item.name ?? '—',
-      change: '',
-    },
-    {
-      label: '主要品类',
-      current: current.categories[0]?.name ?? '—',
-      other: other.categories[0]?.name ?? '—',
-      change: '',
-    },
-  ];
-});
-
-function rebuildCompare(): void {
-  if (!compareOpen.value || !sourceData.value) {
-    compareReport.value = null;
-    return;
-  }
-  compareReport.value = buildMonthReport(
-    filterReportSource(sourceData.value, categoryFilter.value),
-    compareMonth.value,
-  );
-}
-
-function pickCategory(name: string): void {
-  if (categoryFilter.value === name) return;
-  categoryFilter.value = name;
-  void load();
-}
-
-function toggleCompare(): void {
-  compareOpen.value = !compareOpen.value;
-  rebuildCompare();
-}
-
-function onCompareMonthChange(event: any): void {
-  const raw = String(event?.detail?.value ?? '');
-  const value = raw.slice(0, 7);
-  if (!/^\d{4}-\d{2}$/.test(value) || value > TODAY_MONTH) return;
-  compareMonth.value = value;
-  rebuildCompare();
 }
 
 onUnmounted(() => {
@@ -454,11 +335,6 @@ const categorySlices = computed(() => {
     };
   });
 });
-
-/** 品类圆环中间的总天数：每个有记录的日子只记一次，和圆环各段相加一致 */
-const categoryTotalDays = computed(() =>
-  (report.value?.categories ?? []).reduce((sum, category) => sum + category.days, 0),
-);
 
 /** 圆环旁边的主力图例：占比最高的那一类 */
 const topCategory = computed(
@@ -709,53 +585,6 @@ onShow(() => {
       </view>
       <view v-if="!isCurrentMonth" class="month__today" @click="goToday">
         <text class="month__today-text">回到今天</text>
-      </view>
-
-      <!-- 品类筛选 + 两月对比入口 -->
-      <view class="report-filter">
-        <scroll-view scroll-x class="filter-chips">
-          <view
-            v-for="name in categoryOptions"
-            :key="name"
-            :class="['filter-chip', categoryFilter === name ? 'filter-chip--on' : '']"
-            @click="pickCategory(name)"
-          >
-            {{ name }}
-          </view>
-        </scroll-view>
-        <view
-          :class="['compare-toggle', compareOpen ? 'compare-toggle--on' : '']"
-          @click="toggleCompare"
-        >
-          {{ compareOpen ? '收起对比' : '对比' }}
-        </view>
-      </view>
-
-      <!-- 两月对比 -->
-      <view v-if="compareOpen && compareReport" class="card compare">
-        <view class="compare__head">
-          <view>
-            <view class="compare__title">两月对比</view>
-            <view class="compare__hint">{{ categoryFilter === '全部' ? '全部品类' : categoryFilter }}</view>
-          </view>
-          <picker mode="date" fields="month" :value="compareMonth + '-01'" @change="onCompareMonthChange">
-            <view class="compare__pick">对比月：{{ compareMonthLabel }} ▾</view>
-          </picker>
-        </view>
-        <view class="compare__table">
-          <view class="compare__row compare__row--head">
-            <text class="compare__cell">指标</text>
-            <text class="compare__cell">{{ report.label }}</text>
-            <text class="compare__cell">{{ compareMonthLabel }}</text>
-            <text class="compare__cell compare__cell--change">变化</text>
-          </view>
-          <view v-for="row in compareRows" :key="row.label" class="compare__row">
-            <text class="compare__cell">{{ row.label }}</text>
-            <text class="compare__cell">{{ row.current }}</text>
-            <text class="compare__cell">{{ row.other }}</text>
-            <text class="compare__cell compare__cell--change">{{ row.change }}</text>
-          </view>
-        </view>
       </view>
 
       <!-- 年月选择面板 -->
@@ -3098,124 +2927,5 @@ onShow(() => {
   color: #b8a582;
   font-size: 32rpx;
   line-height: 1;
-}
-
-/* 品类筛选 + 两月对比 */
-.report-filter {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  margin: 2rpx 0 16rpx;
-}
-
-.filter-chips {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-}
-
-.filter-chip {
-  display: inline-block;
-  padding: 10rpx 22rpx;
-  margin-right: 12rpx;
-  border-radius: 999rpx;
-  background: #ffffff;
-  color: #8a744f;
-  font-size: 23rpx;
-  box-shadow: 0 2rpx 10rpx rgba(96, 72, 30, 0.05);
-}
-
-.filter-chip--on {
-  background: #3a2b16;
-  color: #ffffff;
-}
-
-.compare-toggle {
-  flex-shrink: 0;
-  padding: 10rpx 22rpx;
-  border-radius: 999rpx;
-  border: 1rpx solid #e6d5b4;
-  background: rgba(255, 255, 255, 0.75);
-  color: #9a6514;
-  font-size: 23rpx;
-}
-
-.compare-toggle--on {
-  background: #9a6514;
-  border-color: #9a6514;
-  color: #ffffff;
-}
-
-.compare {
-  margin-bottom: 18rpx;
-  padding: 24rpx;
-}
-
-.compare__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12rpx;
-}
-
-.compare__title {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #3a2b16;
-}
-
-.compare__hint {
-  margin-top: 4rpx;
-  font-size: 21rpx;
-  color: #9a8055;
-}
-
-.compare__pick {
-  padding: 10rpx 16rpx;
-  border-radius: 999rpx;
-  background: #fbf3e3;
-  color: #9a6514;
-  font-size: 23rpx;
-}
-
-.compare__table {
-  margin-top: 18rpx;
-}
-
-.compare__row {
-  display: flex;
-  align-items: center;
-  padding: 12rpx 0;
-  border-bottom: 1rpx solid #f0e4ca;
-}
-
-.compare__row:last-child {
-  border-bottom: none;
-}
-
-.compare__row--head {
-  font-size: 21rpx;
-  color: #9a8055;
-}
-
-.compare__row--head .compare__cell {
-  font-size: 21rpx;
-  color: #9a8055;
-}
-
-.compare__cell {
-  flex: 1;
-  min-width: 0;
-  font-size: 23rpx;
-  color: #5c4a2e;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.compare__cell--change {
-  flex: 1.2;
-  text-align: right;
-  color: #9a6514;
 }
 </style>

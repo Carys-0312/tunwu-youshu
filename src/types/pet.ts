@@ -1,6 +1,3 @@
-/** 小囤的状态。库存页只有 idle；问答页会跟着提问/回答/出错切换。 */
-export type PetMood = 'idle' | 'thinking' | 'speaking' | 'error';
-
 /** 预设性格的 id，和服务端 AssistantService 里的 PERSONALITIES 对应 */
 export type PersonalityId = 'gentle' | 'sharp' | 'genki' | 'calm' | 'custom';
 

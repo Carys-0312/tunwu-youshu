@@ -5,6 +5,8 @@ import { usePersonaStore } from '@/stores/persona';
 import { configureAutoSync, runAutoSync, startAutoSync } from '@/services/auto-sync';
 import { scheduleLocalReminders } from '@/services/reminders';
 import { checkFeedbackReplies, startFeedbackReplyWatch } from '@/services/feedback-reply';
+import { startPresenceHeartbeat, stopPresenceHeartbeat } from '@/services/presence';
+import { reportLocationIfDue } from '@/services/location';
 import { bindPushMessage, registerPushClient } from '@/services/push';
 import { logError, logDetail, logInfo } from '@/services/logger';
 import {
@@ -95,11 +97,16 @@ onShow(() => {
   openFromNotification();
   void registerPushClient();
   void checkFeedbackReplies();
+  // 登录状态下每 60 秒上报一次在线心跳，后台用户管理据此显示在线 / 离线
+  startPresenceHeartbeat();
+  // 已同意位置统计时，每天最多补报一次城市（失败静默）
+  void reportLocationIfDue();
   syncReminderSchedule();
   void runAutoSync({ checkRemote: true });
 });
 
 onHide(() => {
+  stopPresenceHeartbeat();
   // 刚改过库存就切后台时，把未来几天的提醒重新排一下
   syncReminderSchedule();
   void runAutoSync();

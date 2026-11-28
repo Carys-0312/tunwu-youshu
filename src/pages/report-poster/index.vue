@@ -177,12 +177,6 @@ const THEMES: Record<TemplateId, PosterTheme> = {
 
 const TEMPLATES: PosterTheme[] = [THEMES.journal, THEMES.fridge, THEMES.polaroid];
 
-const KIND_LABEL: Record<AdviceKind, string> = {
-  act: '临期',
-  buy: '补货',
-  hold: '缓买',
-};
-
 const store = useInventoryStore();
 const instance = getCurrentInstance();
 const kind = ref<PosterKind>('month');

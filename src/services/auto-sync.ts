@@ -99,14 +99,6 @@ function saveState(userId: string, state: SyncState): void {
     console.warn('[auto-sync] 保存同步状态失败', err);
   }
 }
-
-/** 当前账号上次成功同步的本机时间；没有记录返回 null */
-export function lastSyncAt(): number | null {
-  const session = getSession();
-  if (!session) return null;
-  return loadState(session.user.id)?.at ?? null;
-}
-
 /** 内容指纹：行顺序无关，任何一张表发生变化都会变 */
 async function localChecksum(): Promise<string> {
   const data = await readAllTables();
@@ -180,7 +172,7 @@ export async function rememberSync(revision: number): Promise<void> {
  * - 本机没改过、服务器也没有更新 → 直接返回（不发请求）
  * - 这台设备第一次同步这个账号：服务器有数据就先拉下来，没有就把本机推上去
  * - 本机改过 → 推送；没改过但服务器 revision 更新 → 拉取
- * - force=true 供「立即同步」使用：跳过冷却，并尽量和服务器对一次账
+ * - force=true：跳过冷却，立即和服务器对一次账（手动调试用）
  */
 export async function runAutoSync(
   options: { checkRemote?: boolean; force?: boolean } = {},

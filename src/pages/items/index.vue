@@ -7,7 +7,8 @@ import { onShow } from '@dcloudio/uni-app';
 import AssistantCompanion from '@/components/AssistantCompanion.vue';
 import TabBar from '@/components/TabBar.vue';
 import FeatureTour from '@/components/FeatureTour.vue';
-import { maybeStartFeatureTour } from '@/services/feature-tour';
+import { featureTour, maybeStartFeatureTour } from '@/services/feature-tour';
+import { maybeAskLocationConsent } from '@/services/location';
 
 // 自定义 tabBar 负责显示，原生那条要藏掉，不然会叠在一起
 onShow(() => {
@@ -18,6 +19,12 @@ onShow(() => {
     const route = pages[pages.length - 1]?.route;
     if (route === 'pages/items/index') maybeStartFeatureTour();
   }, 350);
+  // 位置统计同意卡：晚于引导出现，避免两个浮层叠在一起
+  setTimeout(() => {
+    const pages = getCurrentPages();
+    const route = pages[pages.length - 1]?.route;
+    if (route === 'pages/items/index' && !featureTour.visible) void maybeAskLocationConsent();
+  }, 1600);
 });
 </script>
 

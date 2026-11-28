@@ -81,11 +81,6 @@ export interface Alias {
   count: number;
 }
 
-export interface SchemaMeta {
-  key: string;
-  value: string;
-}
-
 export type TableName =
   | 'item'
   | 'batch'

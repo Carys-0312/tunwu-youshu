@@ -28,7 +28,7 @@ import {
 } from '@/services/sync';
 import { fetchMe, getSession, logout, type AuthSession } from '@/services/auth';
 import { unregisterPushClient } from '@/services/push';
-import { rememberSync, lastSyncAt, runAutoSync } from '@/services/auto-sync';
+import { rememberSync, runAutoSync } from '@/services/auto-sync';
 import TabBar from '@/components/TabBar.vue';
 import FeatureTour from '@/components/FeatureTour.vue';
 import { startFeatureTour } from '@/services/feature-tour';
@@ -43,7 +43,6 @@ const diagnostics = ref<ReminderDiagnostics>(reminderDiagnostics());
 const syncInfo = ref<SyncStatus | null>(null);
 const syncBusy = ref('');
 const syncError = ref('');
-const lastSync = ref<number | null>(null);
 const session = ref<AuthSession | null>(getSession());
 const loggedIn = computed(() => !!session.value);
 // 构建信息由 vite.config.ts 在打包时注入，方便确认手机上装的是哪个包
@@ -59,13 +58,6 @@ const syncSummary = computed(() => {
   if (!syncInfo.value) return syncError.value ? '连不上服务' : '—';
   const counts = syncInfo.value.counts;
   return `物品 ${counts.item ?? 0} · 批次 ${counts.batch ?? 0} · 流水 ${counts.consumption ?? 0}`;
-});
-
-const lastSyncLabel = computed(() => {
-  if (!loggedIn.value) return '登录后可同步';
-  if (lastSync.value) return formatSyncTime(lastSync.value);
-  if (syncInfo.value?.syncedAt) return formatSyncTime(syncInfo.value.syncedAt);
-  return '还没同步过';
 });
 
 /** 调试用：确认打出来的包里到底有没有本地推送能力 */
@@ -187,7 +179,6 @@ function openLogs(): void {
 onShow(async () => {
   uni.hideTabBar({ animation: false });
   session.value = getSession();
-  lastSync.value = lastSyncAt();
   // 先等本地库就绪，再读提醒设置，否则冷启动时会读不到
   try {
     await store.init();
@@ -205,12 +196,10 @@ onShow(async () => {
   await systemNotifyRefreshPermission();
   perm.value = notificationPermissionState();
   diagnostics.value = reminderDiagnostics();
-  if (syncDebug.value || loggedIn.value) void loadSyncStatus();
+  if (syncDebug.value) void loadSyncStatus();
   void refreshSession();
   // 进「我的」顺便让后台对一次账（有冷却，不会每次都请求）
-  void runAutoSync({ checkRemote: true }).then(() => {
-    lastSync.value = lastSyncAt();
-  });
+  void runAutoSync({ checkRemote: true });
 });
 
 function tapVersion(): void {
@@ -284,7 +273,6 @@ function doLogout(): void {
       session.value = null;
       syncInfo.value = null;
       syncError.value = '';
-      lastSync.value = null;
       uni.showToast({ title: '已退出登录', icon: 'none' });
     },
   });
@@ -338,36 +326,6 @@ async function pushToServer(force = false): Promise<void> {
       syncInfo.value = null;
     }
     uni.showModal({ title: '同步失败', content: message, showCancel: false });
-  } finally {
-    syncBusy.value = '';
-  }
-}
-
-/** 「我的」页的立即同步：有本机改动就上传，否则和服务器对一次 revision */
-async function syncNowAction(): Promise<void> {
-  if (!loggedIn.value) {
-    openLogin('login');
-    return;
-  }
-  if (syncBusy.value) return;
-  syncBusy.value = 'now';
-  try {
-    await store.init();
-    const result = await runAutoSync({ checkRemote: true, force: true });
-    lastSync.value = lastSyncAt();
-    await loadSyncStatus();
-    if (result.outcome === 'error') {
-      syncError.value = result.message;
-      uni.showToast({ title: result.message, icon: 'none' });
-      return;
-    }
-    syncError.value = '';
-    const title = result.outcome === 'pulled'
-      ? '已从服务器更新'
-      : result.outcome === 'pushed'
-        ? '已上传本机数据'
-        : '已是最新';
-    uni.showToast({ title, icon: result.outcome === 'noop' ? 'none' : 'success' });
   } finally {
     syncBusy.value = '';
   }
@@ -653,22 +611,7 @@ async function importData(): Promise<void> {
       </template>
     </view>
 
-    <!-- 登录后可见的同步入口：最近同步时间 + 立即同步 -->
-    <view v-if="loggedIn" class="section-title">
-      <text>同步</text>
-      <text class="muted">{{ syncInfo ? `revision ${syncInfo.revision}` : '多设备同步' }}</text>
-    </view>
-    <view v-if="loggedIn" class="card">
-      <view class="kv">
-        <text class="kv__k">最近同步</text>
-        <text class="kv__v">{{ lastSyncLabel }}</text>
-      </view>
-      <view v-if="syncError" class="sync-error">{{ syncError }}</view>
-      <view class="action" @click="syncNowAction">
-        <text>立即同步</text>
-        <text class="action__hint">{{ syncBusy === 'now' ? '同步中…' : '检查服务器并同步' }}</text>
-      </view>
-    </view>
+    <!-- 同步只走后台自动流程，不再给普通用户看到手动入口 -->
 
     <!-- 通知没开全时，一进「我的」就能看到入口；开了就不再打扰 -->
     <view

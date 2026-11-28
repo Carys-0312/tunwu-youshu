@@ -16,6 +16,14 @@ import {
   type AuthSession,
 } from '@/services/auth';
 import { pickAvatar } from '@/services/avatar';
+import {
+  disableLocationReporting,
+  enableLocationReporting,
+  fetchServerLocation,
+  locationSupported,
+  readLocationState,
+  type LocationState,
+} from '@/services/location';
 
 const session = ref<AuthSession | null>(getSession());
 const nickname = ref('');
@@ -45,6 +53,17 @@ const recoveryCode = ref('');
 const issuingRecovery = ref(false);
 const recoveryError = ref('');
 const recoveryOpen = ref(false);
+
+// 位置统计：只记录城市，可随时关闭
+const locationState = ref<LocationState>(readLocationState());
+const locationBusy = ref(false);
+const locationStatusLabel = computed(() => {
+  if (locationState.value.status === 'granted') {
+    return locationState.value.city ? `已开启 · ${locationState.value.city}` : '已开启';
+  }
+  if (locationState.value.status === 'denied') return '已关闭';
+  return '未开启';
+});
 
 // 输入时才出现的字数 / 规则提示
 const nicknameFocused = ref(false);
@@ -78,7 +97,52 @@ onShow(async () => {
     // 拉不到最新资料就先按本机缓存的显示，不影响改名和改密码
     console.error(err);
   }
+
+  // 以服务端为准刷新一次位置统计状态（换设备后也能看到已开启）
+  locationState.value = readLocationState();
+  if (locationSupported()) {
+    try {
+      const server = await fetchServerLocation();
+      if (server.consent === 'granted') {
+        locationState.value = { ...locationState.value, status: 'granted', city: server.city };
+      } else if (server.consent === 'denied') {
+        locationState.value = { ...locationState.value, status: 'denied', city: undefined };
+      }
+    } catch {
+      // 服务端不可用时按本机缓存显示
+    }
+  }
 });
+
+async function toggleLocation(event: any): Promise<void> {
+  if (locationBusy.value) return;
+  const on = Boolean(event?.detail?.value);
+  locationBusy.value = true;
+  try {
+    if (on) {
+      const result = await enableLocationReporting();
+      locationState.value = readLocationState();
+      if (result.status === 'updated' && result.city) {
+        uni.showToast({ title: `已记录：${result.city}`, icon: 'none' });
+      } else if (result.message) {
+        uni.showToast({ title: result.message, icon: 'none' });
+      }
+    } else {
+      await disableLocationReporting();
+      locationState.value = readLocationState();
+      uni.showToast({ title: '已关闭位置统计', icon: 'none' });
+    }
+  } catch (err) {
+    locationState.value = readLocationState();
+    uni.showModal({
+      title: on ? '开启失败' : '关闭失败',
+      content: err instanceof Error ? err.message : '请稍后再试',
+      showCancel: false,
+    });
+  } finally {
+    locationBusy.value = false;
+  }
+}
 
 async function chooseAvatar(): Promise<void> {
   try {
@@ -345,6 +409,32 @@ onUnmounted(stopEmailTimer);
     </view>
 
     <view class="section-title">
+      <text>位置统计</text>
+      <text class="muted">{{ locationStatusLabel }}</text>
+    </view>
+    <view class="card">
+      <view class="field field--switch">
+        <text class="field__label">参与用户分布</text>
+        <switch
+          :checked="locationState.status === 'granted'"
+          :disabled="!locationSupported() || locationBusy"
+          color="#9a6514"
+          @change="toggleLocation"
+        />
+      </view>
+      <view class="recovery-note">
+        只记录所在城市，用来了解大家分布；不记录行踪，也不会在后台定位。App 前台最多每天更新一次，可以随时关闭。
+      </view>
+      <view v-if="!locationSupported()" class="recovery-note">
+        浏览器需要 HTTPS 才能定位，当前只有 App 内可用。
+      </view>
+      <view v-else-if="locationState.status === 'granted' && locationState.city" class="field">
+        <text class="field__label">最近记录</text>
+        <view class="field__value">{{ locationState.city }}</view>
+      </view>
+    </view>
+
+    <view class="section-title">
       <text>修改密码</text>
     </view>
     <view class="card">
@@ -402,19 +492,23 @@ onUnmounted(stopEmailTimer);
     </view>
 
     <view class="section-title">
-      <text>找回密码</text>
+      <text>找回码</text>
+      <text class="muted">忘记密码时用</text>
     </view>
     <view class="card">
       <view class="recovery-note">
-        忘了密码时，优先用上面绑定的邮箱验证码重置；没绑邮箱就用这串找回码。找回码只显示一次，生成新的以后旧码立即失效。
+        这是一把备用钥匙：现在生成好，以后忘记密码时，在登录页用「用户名 + 找回码 + 新密码」重置。找回码只显示一次，生成新的以后旧码立即失效；如果已经绑定邮箱，也可以直接用邮箱验证码重置。
       </view>
       <view class="field">
-        <text class="field__label">当前密码</text>
+        <view class="field__head">
+          <text class="field__label">当前密码</text>
+          <text class="field__hint">验证身份用，不会修改密码</text>
+        </view>
         <input
           v-model="recoveryCurrent"
           class="field__input"
           password
-          placeholder="验证身份后生成"
+          placeholder="输入当前密码后生成"
           :maxlength="72"
           autocomplete="current-password"
           @confirm="issueRecoveryCode"
@@ -569,6 +663,13 @@ onUnmounted(stopEmailTimer);
 .field {
   padding: 22rpx 0;
   border-bottom: 1rpx solid #f0e4ca;
+}
+
+.field--switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
 }
 
 .field:last-of-type {

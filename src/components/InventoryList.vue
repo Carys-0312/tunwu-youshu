@@ -15,7 +15,7 @@ import { displayCategory } from '@/constants/categories';
 import { describeDays } from '@/utils/date';
 import { itemEmoji } from '@/utils/item-visual';
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     rows: InventoryRow[];
     /** 种类详情页里已经知道种类了，副标题不用再重复 */

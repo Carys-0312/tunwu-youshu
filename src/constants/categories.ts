@@ -13,8 +13,6 @@ export const CATEGORIES = [
   '其他',
 ] as const;
 
-export type Category = (typeof CATEGORIES)[number];
-
 /** 库存页分类卡片的顺序，和入库分类保持一致 */
 export const DISPLAY_CATEGORIES = CATEGORIES;
 
